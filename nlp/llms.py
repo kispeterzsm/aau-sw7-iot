@@ -25,14 +25,14 @@ class Local_LLM():
         )
         self.stopping_criteria = StoppingCriteriaList([StopOnToken(self.pipeline.tokenizer, "Input:")])
 
-    def prompt(self, input_text):
+    def prompt(self, input_text:str) -> str:
         return self.pipeline(input_text,
               max_new_tokens=10,
               stopping_criteria=self.stopping_criteria,
         )
 
 class NLP_Pipeline():
-    def __init__(self, hf_token):
+    def __init__(self, hf_token:str):
         login(hf_token)
 
         # Load models
@@ -89,18 +89,18 @@ class NLP_Pipeline():
         scored_sentences.sort(key=lambda x: x["importance"], reverse=True)
         return scored_sentences[:top_x]
 
-    def extract_answers(sentence_list):
+    def extract_answers(sentence_list:List[str]) -> List[str]:
         """
         Extracts the desired answer part of a text given by an LLM.
         """
         answers=[]
         for sentence in sentence_list:
-            sentence.get("search_term").split("\n")[-2].strip()
+            answers.append(sentence.get("search_term").split("\n")[-2].strip())
         return answers
 
-    def do_the_thing(self,input_text, top_x = 5) -> List[str]:
+    def do_the_thing(self,input_text:str, top_x:int = 5) -> List[str]:
         """
-        Given an input article, breaks it up into sentences, then ranks these based on how important these are.
+        Given an input text, breaks it up into sentences, then ranks these based on how important these are.
         The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
         Returns a list of these phrases.
         """
@@ -126,6 +126,7 @@ class NLP_Pipeline():
         return importants
 
 if __name__=="__main__":
+    #EXAMPLE USAGE
     # Loads in the models from Hugging Face
     hf_token=""
     nlp_pipe = NLP_Pipeline(hf_token)
