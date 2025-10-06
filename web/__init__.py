@@ -1,0 +1,1 @@
+from .sitecontent import get_article_text
