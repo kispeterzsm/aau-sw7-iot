@@ -1,1 +1,1 @@
-from .llms import Local_LLM
+from .llms import NLP_Pipeline
