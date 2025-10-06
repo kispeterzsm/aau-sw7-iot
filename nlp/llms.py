@@ -6,13 +6,13 @@ import spacy
 from typing import List, Tuple, Dict
 # python -m spacy download en_core_web_sm
 
-class StopOnInput(StoppingCriteria):
-    def __init__(self, tokenizer):
+class StopOnToken(StoppingCriteria):
+    def __init__(self, tokenizer, stoptoken):
         self.tokenizer = tokenizer
-        self.stop_ids = tokenizer.encode("Input:")
+        self.stop_ids = tokenizer.encode(stoptoken)
 
     def __call__(self, input_ids, scores, **kwargs):
-        # Check if last tokens match "Input:"
+        # Check if last tokens match the stop token
         return input_ids[0, -len(self.stop_ids):].tolist() == self.stop_ids
 
 class Local_LLM():
@@ -23,7 +23,7 @@ class Local_LLM():
             device=device,
             dtype=torch.bfloat16
         )
-        self.stopping_criteria = StoppingCriteriaList([StopOnInput(self.pipeline.tokenizer)])
+        self.stopping_criteria = StoppingCriteriaList([StopOnToken(self.pipeline.tokenizer, "Input:")])
 
     def prompt(self, input_text):
         return self.pipeline(input_text,
