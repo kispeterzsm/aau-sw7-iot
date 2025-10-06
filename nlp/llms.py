@@ -40,7 +40,7 @@ class NLP_Pipeline():
             self.nlp = spacy.load("en_core_web_sm")
         except:
             print("Warning: spacy model not found. Install with: python -m spacy download en_core_web_sm")
-            return
+            raise Exception("spacy model not found. Install with: python -m spacy download en_core_web_sm")
 
         self.llm = Local_LLM()
         
