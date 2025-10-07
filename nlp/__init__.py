@@ -1,1 +1,1 @@
-from .llms import NLP_Pipeline
+from .pipeline import NLP_Pipeline
