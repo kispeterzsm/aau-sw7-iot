@@ -1,7 +1,6 @@
 from huggingface_hub import login
 import torch
 from transformers import StoppingCriteria, StoppingCriteriaList, pipeline
-import re
 import spacy
 from typing import List, Tuple, Dict
 # python -m spacy download en_core_web_sm
