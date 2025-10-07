@@ -1,6 +1,6 @@
 from newspaper import Article
 
-def get_article_text(url):
+def get_site_data(url):
     """
     Extracts the main article text using newspaper3k.
     Handles most news sites very well.
@@ -8,4 +8,4 @@ def get_article_text(url):
     article = Article(url)
     article.download()
     article.parse()
-    return article.text
+    return article

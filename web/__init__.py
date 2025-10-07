@@ -1,1 +1,1 @@
-from .sitecontent import get_article_text
+from .sitecontent import get_site_data
