@@ -59,12 +59,12 @@ class NLP_Pipeline():
                 {sentence}
                 Output:
                 """
-        
+
     def split_into_sentences(self, text) -> List[str]:
         """Split text into sentences using spacy."""
         doc = self.nlp(text)
         return [sent.text.strip() for sent in doc.sents]
-    
+
     def rank_sentences(self, sentences: List[str], top_x: int = 5) -> List[Dict]:
         """
         Ranks sentences by an importance score based on Named Entity Recognition (NER).
@@ -114,6 +114,7 @@ class NLP_Pipeline():
             answers.append(sentence.get("search_term").split("\n")[-2].strip())
         return answers
 
+
     def process_raw_text(self,input_text:str, top_x:int = 5) -> List[str]:
         """
         Given an input text, breaks it up into sentences, then ranks these based on how important these are.
@@ -123,17 +124,19 @@ class NLP_Pipeline():
         sentences = self.split_into_sentences(input_text)
         importants = self.rank_sentences(sentences, top_x)
         for sentence in importants:
-            output=self.llm.prompt(self.llm_prompt(sentence=sentence["sentence"]))
-            sentence["search_term"]=output[0]['generated_text']   
+            output=self.llm.prompt(self.llm_prompt.format(sentence=sentence["sentence"]))
+            sentence["search_term"]=self.extract_answers(output[0]['generated_text'])
         return importants
+
 
     def process_article(self, article:Article) -> List[str]:
         article = nlp_article(article)
         importants = self.split_into_sentences(article.summary)
+        processed_sentences = []
         for sentence in importants:
-            output=self.llm.prompt(self.llm_prompt(sentence=sentence["sentence"]))
-            sentence["search_term"]=output[0]['generated_text']
-        return importants
+            output=self.llm.prompt(self.llm_prompt.format(sentence=sentence))
+            processed_sentences.append({"sentence": sentence, "search_term": self.extract_answers(output[0]['generated_text'])})
+        return processed_sentences
 
     def do_the_thing(self, input, top_x:int=5):
         """
