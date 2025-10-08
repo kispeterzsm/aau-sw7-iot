@@ -25,8 +25,7 @@ nlp_pipe = NLP_Pipeline(hf_token)
 def url_to_searchterms(url:str, top_x:int=5):
     article=get_site_data(url)
     output=nlp_pipe.do_the_thing(article)
-
-    return [sentence['search_term'] for sentence in output]
+    return output
 
 url=""
 url_to_searchterms(url)
