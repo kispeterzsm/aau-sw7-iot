@@ -1,6 +1,6 @@
 from huggingface_hub import login
 import torch
-from transformers import pipeline
+from transformers import StoppingCriteria, StoppingCriteriaList, pipeline
 import spacy
 # python -m spacy download en_core_web_sm
 import nltk
@@ -132,9 +132,9 @@ class NLP_Pipeline():
         Returns a list of these phrases. If a `newspaper.Article` class is given as input `top_x` will be ignored as this method uses `article.summary`
         """
         if isinstance(input, Article):
-            return self.process_article(input)
+            return [sentence['search_term'] for sentence in self.process_article(input)]
         else:
-            return self.process_raw_text(input, top_x)
+            return [sentence['search_term'] for sentence in self.process_raw_text(input, top_x)]
 
 
 def nlp_article(article:Article) -> Article:
@@ -151,8 +151,7 @@ if __name__=="__main__":
     def url_to_searchterms(url:str, top_x:int=5):
         article=get_site_data(url)
         output=nlp_pipe.do_the_thing(article)
-
-        return [sentence['search_term'] for sentence in output]
+        return output
 
     url=""
     url_to_searchterms(url)
