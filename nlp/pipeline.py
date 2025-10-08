@@ -17,11 +17,18 @@ class Local_LLM():
             dtype=torch.bfloat16
         )
 
-    def prompt(self, input_text:str) -> str:
-        return self.pipeline(input_text,
-              max_new_tokens=10,
-              stop_sequence="Input:"
-        )
+    def prompt(self, input_text:str, max_new_tokens=10, stop_sequence:str=None) -> str:
+        if stop_sequence:
+            return self.pipeline(
+                input_text,
+                max_new_tokens=max_new_tokens,
+                stop_sequence=stop_sequence
+            )
+        else:
+            return self.pipeline(
+                input_text,
+                max_new_tokens=max_new_tokens
+            )
 
 class NLP_Pipeline():
     def __init__(self, hf_token:str):
@@ -111,7 +118,7 @@ class NLP_Pipeline():
         sentences = self.split_into_sentences(input_text)
         importants = self.rank_sentences(sentences, top_x)
         for sentence in importants:
-            output=self.llm.prompt(self.llm_prompt.format(sentence=sentence["sentence"]))
+            output=self.llm.prompt(self.llm_prompt.format(sentence=sentence["sentence"]), stop_sequence="Input:")
             sentence["search_term"]=self.extract_answer(output[0]['generated_text'])
         return importants
 
@@ -121,21 +128,50 @@ class NLP_Pipeline():
         importants = self.split_into_sentences(article.summary)
         processed_sentences = []
         for sentence in importants:
-            output=self.llm.prompt(self.llm_prompt.format(sentence=sentence))
+            output=self.llm.prompt(self.llm_prompt.format(sentence=sentence), stop_sequence="Input:")
             processed_sentences.append({"sentence": sentence, "search_term": self.extract_answer(output[0]['generated_text'])})
         return processed_sentences
 
-    def do_the_thing(self, input, top_x:int=5):
+    def do_the_thing(self, input, top_x:int=5, query_variations:int=1) -> List[str]:
         """
         Given an input breaks it up into sentences, then ranks these based on how important these are.
         The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
         Returns a list of these phrases. If a `newspaper.Article` class is given as input `top_x` will be ignored as this method uses `article.summary`
         """
+        searchterms=None
         if isinstance(input, Article):
-            return [sentence['search_term'] for sentence in self.process_article(input)]
+            searchterms= [sentence['search_term'] for sentence in self.process_article(input)]
         else:
-            return [sentence['search_term'] for sentence in self.process_raw_text(input, top_x)]
+            searchterms= [sentence['search_term'] for sentence in self.process_raw_text(input, top_x)]
+        
+        if query_variations<=1:
+            return searchterms
 
+        res=[]
+        for query in searchterms:
+            res.append(query)
+            variations=self.query_variations(query, query_variations)
+            for var in variations:
+                res.append(var)
+
+        return res
+
+    def query_variations(self, query: str, num_variations: int = 5) -> List[str]:
+        """
+        Generates conceptually related queries from the input string.
+        """
+
+        prompt="""
+        Generate {num_variations} diverse search engine queries about the topic '{query}'.
+        The queries should be conceptually different. Do not use a numbered list or bullet points. Just list each query on a new line.
+        """
+        prompt=prompt.format(num_variations=num_variations, query=query)
+
+        generated_text = self.llm.prompt(prompt, stop_sequence="<|eot_id|>")[0]['generated_text']
+        response_text = generated_text[len(prompt):].strip()
+        queries = [line.strip() for line in response_text.split("\n") if line.strip()]
+        
+        return queries
 
 def nlp_article(article:Article) -> Article:
     """
