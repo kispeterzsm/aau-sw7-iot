@@ -1,21 +1,12 @@
 from huggingface_hub import login
 import torch
-from transformers import StoppingCriteria, StoppingCriteriaList, pipeline
+from transformers import pipeline
 import spacy
 # python -m spacy download en_core_web_sm
 import nltk
 nltk.download('punkt_tab')
 from newspaper import Article
 from typing import List, Tuple, Dict
-
-class StopOnToken(StoppingCriteria):
-    def __init__(self, tokenizer, stoptoken):
-        self.tokenizer = tokenizer
-        self.stop_ids = tokenizer.encode(stoptoken)
-
-    def __call__(self, input_ids, scores, **kwargs):
-        # Check if last tokens match the stop token
-        return input_ids[0, -len(self.stop_ids):].tolist() == self.stop_ids
 
 class Local_LLM():
     def __init__(self, model="google/gemma-3-4b-it", device="cuda", task="text-generation"):
@@ -25,12 +16,11 @@ class Local_LLM():
             device=device,
             dtype=torch.bfloat16
         )
-        self.stopping_criteria = StoppingCriteriaList([StopOnToken(self.pipeline.tokenizer, "Input:")])
 
     def prompt(self, input_text:str) -> str:
         return self.pipeline(input_text,
               max_new_tokens=10,
-              stopping_criteria=self.stopping_criteria,
+              stop_sequence="Input:"
         )
 
 class NLP_Pipeline():
@@ -105,15 +95,12 @@ class NLP_Pipeline():
         scored_sentences.sort(key=lambda x: x["importance"], reverse=True)
         return scored_sentences[:top_x]
 
-    def extract_answers(sentence_list:List[str]) -> List[str]:
+    def extract_answer(self, sentence:str) -> List[str]:
         """
         Extracts the desired answer part of a text given by an LLM.
         """
-        answers=[]
-        for sentence in sentence_list:
-            answers.append(sentence.get("search_term").split("\n")[-2].strip())
-        return answers
-
+        return sentence.split("\n")[-2].strip()
+        
 
     def process_raw_text(self,input_text:str, top_x:int = 5) -> List[str]:
         """
@@ -125,7 +112,7 @@ class NLP_Pipeline():
         importants = self.rank_sentences(sentences, top_x)
         for sentence in importants:
             output=self.llm.prompt(self.llm_prompt.format(sentence=sentence["sentence"]))
-            sentence["search_term"]=self.extract_answers(output[0]['generated_text'])
+            sentence["search_term"]=self.extract_answer(output[0]['generated_text'])
         return importants
 
 
@@ -135,7 +122,7 @@ class NLP_Pipeline():
         processed_sentences = []
         for sentence in importants:
             output=self.llm.prompt(self.llm_prompt.format(sentence=sentence))
-            processed_sentences.append({"sentence": sentence, "search_term": self.extract_answers(output[0]['generated_text'])})
+            processed_sentences.append({"sentence": sentence, "search_term": self.extract_answer(output[0]['generated_text'])})
         return processed_sentences
 
     def do_the_thing(self, input, top_x:int=5):
@@ -158,11 +145,14 @@ def nlp_article(article:Article) -> Article:
     return article
 
 if __name__=="__main__":
-    #EXAMPLE USAGE
-    # Loads in the models from Hugging Face
     hf_token=""
     nlp_pipe = NLP_Pipeline(hf_token)
 
-    # returns a list of google search phrases
-    output=nlp_pipe.do_the_thing("Elmo has been convicted for the alleged murder and subsequent cannibalistic devouring of his former friend, Cookie Monster.")
-    print(output)
+    def url_to_searchterms(url:str, top_x:int=5):
+        article=get_site_data(url)
+        output=nlp_pipe.do_the_thing(article)
+
+        return [sentence['search_term'] for sentence in output]
+
+    url=""
+    url_to_searchterms(url)
