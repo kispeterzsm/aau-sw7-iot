@@ -14,7 +14,24 @@ from nlp import NLP_Pipeline
 
 nlp_pipe = NLP_Pipeline(hf_token)
 ```
-Whenever you have a text you want to process, run it like this: 
+If you have a URL to an article, do something like this:
+```python
+from nlp import NLP_Pipeline
+from web import get_site_data
+
+hf_token=""
+nlp_pipe = NLP_Pipeline(hf_token)
+
+def url_to_searchterms(url:str, top_x:int=5):
+    article=get_site_data(url)
+    output=nlp_pipe.do_the_thing(article)
+
+    return [sentence['search_term'] for sentence in output]
+
+url=""
+url_to_searchterms(url)
+```
+If you just have text you want to process, run it like this: 
 
 ```python
 output=nlp_pipe.do_the_thing(input_text)
