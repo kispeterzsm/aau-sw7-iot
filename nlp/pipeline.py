@@ -13,8 +13,9 @@ class Local_LLM():
         self.pipeline = pipeline(
             task=task,
             model=model,
-            device=device,
-            dtype=torch.bfloat16
+            device_map="auto",
+            dtype=torch.bfloat16,
+            model_kwargs={"load_in_4bit": True},
         )
 
     def prompt(self, input_text:str, max_new_tokens=10, stop_sequence:str=None) -> str:
@@ -157,21 +158,44 @@ class NLP_Pipeline():
         return res
 
     def query_variations(self, query: str, num_variations: int = 5) -> List[str]:
-        """
-        Generates conceptually related queries from the input string.
-        """
+            """
+            Generates conceptually related queries from the input string using a proper chat template.
+            """
 
-        prompt="""
-        Generate {num_variations} diverse search engine queries about the topic '{query}'.
-        The queries should be conceptually different. Do not use a numbered list or bullet points. Just list each query on a new line.
-        """
-        prompt=prompt.format(num_variations=num_variations, query=query)
+            messages = [
+                {
+                    "role": "user",
+                    "content": f"Generate {num_variations} diverse search engine queries about the topic '{query}'.\n"
+                            f"The queries should be conceptually different. Do not use a numbered list or bullet points. Just list each query on a new line."
+                },
+            ]
+            
+            prompt = self.llm.pipeline.tokenizer.apply_chat_template(
+                messages, 
+                tokenize=False, 
+                add_generation_prompt=True
+            )
 
-        generated_text = self.llm.prompt(prompt, stop_sequence="<|eot_id|>")[0]['generated_text']
-        response_text = generated_text[len(prompt):].strip()
-        queries = [line.strip() for line in response_text.split("\n") if line.strip()]
-        
-        return queries
+            terminators = [
+                self.llm.pipeline.tokenizer.eos_token_id,
+                self.llm.pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")
+            ]
+
+            outputs = self.llm.pipeline(
+                prompt,
+                max_new_tokens=256,
+                eos_token_id=terminators,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.95,
+            )
+
+            generated_text = outputs[0]['generated_text']
+            response_text = generated_text[len(prompt):].strip()
+            queries = [line.strip() for line in response_text.split("\n") if line.strip()]
+            
+            queries.insert(0, query)
+            return list(dict.fromkeys(queries))
 
 def nlp_article(article:Article) -> Article:
     """
@@ -179,15 +203,3 @@ def nlp_article(article:Article) -> Article:
     """
     article.nlp()
     return article
-
-if __name__=="__main__":
-    hf_token=""
-    nlp_pipe = NLP_Pipeline(hf_token)
-
-    def url_to_searchterms(url:str, top_x:int=5):
-        article=get_site_data(url)
-        output=nlp_pipe.do_the_thing(article)
-        return output
-
-    url=""
-    url_to_searchterms(url)
