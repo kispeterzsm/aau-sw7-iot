@@ -1,0 +1,6 @@
+huggingface-hub
+torch
+transformers
+spacy
+typing
+newspaper3k
