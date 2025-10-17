@@ -5,7 +5,7 @@ import SearchPanel from "./components/SearchPanel";
 import ResultsList from "./components/ResultsList";
 import TimelinePanel from "./components/TimelinePanel";
 import { ResultItem, JobStatus } from "./components/types";
-
+import DarkModeToggle from "./components/DarkModeToggle";
 
 export default function Page() {
   const [mounted, setMounted] = useState(false);
@@ -21,6 +21,8 @@ export default function Page() {
 
   const subscriptionRef = useRef<number | null>(null);
 
+  // ... (all your functions like createJob, generateResults, etc. remain the same)
+  // No changes are needed in the component's logic
   useEffect(() => {
     setMounted(true);
     return () => {
@@ -156,18 +158,26 @@ export default function Page() {
 
   const avgConfidence = useMemo(() => (results.length ? Math.round((results.reduce((s, r) => s + r.confidence, 0) / results.length) * 100) : 0), [results]);
 
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-white text-slate-800 antialiased">
+    <main className="min-h-screen bg-background text-foreground transition-colors duration-300 antialiased">
       {/* Top hero header */}
-      <header className="sticky top-0 z-40 bg-white backdrop-blur border-b border-gray-300">
-        <div className="max-w-7xl mx-auto px-8 py-5 flex items-center gap-6">
+      <header className="sticky top-0 z-40 border-b border-gray-300 dark:border-slate-700 bg-background/80 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-8 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-3xl bg-emerald-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md">IO</div>
+            <div className="w-12 h-12 rounded-3xl bg-emerald-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md">
+              IOT
+            </div>
             <div>
-              <div className="text-xl font-semibold tracking-tight">InfoOrigin</div>
-              <div className="text-xs text-slate-500">Provenance & origin tracker for online claims</div>
+              <div className="text-xl font-semibold tracking-tight">
+                Information Origin Tracker
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                Provenance & origin tracker for online claims
+              </div>
             </div>
           </div>
+          <DarkModeToggle />
         </div>
       </header>
 
@@ -201,15 +211,15 @@ export default function Page() {
           <TimelinePanel results={results} avgConfidence={avgConfidence} />
         </aside>
       </section>
-
+      
       {/* Snapshot modal (no animations) */}
       {snapshotUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSnapshotUrl(null)} />
-          <div className="relative max-w-5xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden border">
-            <div className="flex items-center justify-between p-4 border-b">
+          <div className="relative max-w-5xl w-full bg-background rounded-2xl shadow-2xl overflow-hidden border border-slate-300 dark:border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-slate-300 dark:border-slate-700">
               <div className="text-sm font-medium">Snapshot preview</div>
-              <button onClick={() => setSnapshotUrl(null)} className="px-3 py-1 text-sm text-slate-600">Close</button>
+              <button onClick={() => setSnapshotUrl(null)} className="px-3 py-1 text-sm rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Close</button>
             </div>
             <div style={{ height: "72vh" }}>
               <iframe title="snapshot" src={snapshotUrl} className="w-full h-full border-0" sandbox="allow-same-origin allow-forms" />
