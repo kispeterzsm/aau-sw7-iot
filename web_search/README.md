@@ -13,7 +13,7 @@ The project simulates a web search on Bing and can be used to find the oldest we
 
 A simple example that given a string as input it will return the oldest source from a list of 100 webpages.
 
-```
+```python
 # --- Example Usage ---
 if __name__ == "__main__":
     scraper = WebScraping(verbose=True)
