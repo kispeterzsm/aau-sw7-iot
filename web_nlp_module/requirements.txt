@@ -5,3 +5,6 @@ spacy
 typing
 newspaper3k
 lxml-html-clean
+fastapi
+uvicorn[standard]
+requests

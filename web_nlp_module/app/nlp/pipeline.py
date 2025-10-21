@@ -110,7 +110,7 @@ class NLP_Pipeline():
         return sentence.split("\n")[-2].strip()
         
 
-    def process_raw_text(self,input_text:str, top_x:int = 5) -> List[str]:
+    def process_raw_text(self,input_text:str, top_x:int = 5) -> List[dict]:
         """
         Given an input text, breaks it up into sentences, then ranks these based on how important these are.
         The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
@@ -124,7 +124,7 @@ class NLP_Pipeline():
         return importants
 
 
-    def process_article(self, article:Article) -> List[str]:
+    def process_article(self, article:Article) -> List[dict]:
         article = nlp_article(article)
         importants = self.split_into_sentences(article.summary)
         processed_sentences = []
@@ -133,7 +133,7 @@ class NLP_Pipeline():
             processed_sentences.append({"sentence": sentence, "search_term": self.extract_answer(output[0]['generated_text'])})
         return processed_sentences
 
-    def do_the_thing(self, input, top_x:int=5, query_variations:int=1) -> List[str]:
+    def do_the_thing(self, input, top_x:int=5, query_variations:int=1) -> List[dict]:
         """
         Given an input breaks it up into sentences, then ranks these based on how important these are.
         The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
@@ -141,9 +141,9 @@ class NLP_Pipeline():
         """
         searchterms=None
         if isinstance(input, Article):
-            searchterms= [sentence['search_term'] for sentence in self.process_article(input)]
+            searchterms= self.process_article(input)
         else:
-            searchterms= [sentence['search_term'] for sentence in self.process_raw_text(input, top_x)]
+            searchterms= self.process_raw_text(input, top_x)
         
         if query_variations<=1:
             return searchterms
@@ -151,10 +151,10 @@ class NLP_Pipeline():
         res=[]
         for query in searchterms:
             res.append(query)
-            variations=self.query_variations(query, query_variations)
+            variations=self.query_variations(query["searchterm"], query_variations)
             for var in variations:
-                res.append(var)
-
+                res.append({"sentence":query["sentence"], "searchterm":var})
+                
         return res
 
     def query_variations(self, query: str, num_variations: int = 5) -> List[str]:
