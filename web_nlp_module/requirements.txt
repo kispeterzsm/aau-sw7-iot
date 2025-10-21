@@ -4,3 +4,4 @@ transformers
 spacy
 typing
 newspaper3k
+lxml-html-clean

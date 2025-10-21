@@ -31,3 +31,15 @@ if __name__ == "__main__":
     else:
         print("No dated results found.")
 ```
+
+## Site content
+
+Responsible for loading content from a given URL.
+You can do this in the following way:
+```python
+from web import get_site_data
+
+website = get_site_data(url)
+print(website.text) # the main text of the page
+print(website.publish_date) # the time the page was published
+```
