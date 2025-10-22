@@ -1,1 +1,1 @@
-from .query_generator import QueryGenerator
+from .web_search import WebScraping
