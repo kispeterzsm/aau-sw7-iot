@@ -16,8 +16,7 @@ scraper = WebScraping()
 nlp_pipe = NLP_Pipeline(HF_TOKEN)
 
 class Input(BaseModel):
-    text: str
-    url: str
+    input: str
     search_depth: int # how many websearch results do you want
 
 @app.post("/link")
@@ -26,7 +25,7 @@ def link(data: Input):
     Fetch content from the web and process it using the local LLM.
     """
     # process the text
-    article=get_site_data(data.url)
+    article=get_site_data(data.input)
     queries=nlp_pipe.do_the_thing(article)
 
     # do the websearch
