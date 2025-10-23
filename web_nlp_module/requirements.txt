@@ -8,3 +8,6 @@ lxml-html-clean
 fastapi
 uvicorn[standard]
 requests
+beautifulsoup4
+lxml
+stealth-requests
