@@ -17,7 +17,7 @@ nlp_pipe = NLP_Pipeline(HF_TOKEN)
 
 class Input(BaseModel):
     input: str
-    search_depth: int # how many websearch results do you want
+    search_depth: int # how many websearch results do you want  
 
 @app.post("/link")
 def link(data: Input):
