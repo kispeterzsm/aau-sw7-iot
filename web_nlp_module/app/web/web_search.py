@@ -287,15 +287,17 @@ class WebScraping:
                 if date_from_page:
                     date = date_from_page
 
-            if title and url:
+            # Only add if both title, url, and a valid date exist
+            if title and url and date:
                 results.append({
                     "title": title,
                     "url": url,
                     "snippet": snippet,
-                    "date": date.strftime("%Y-%m-%d") if date else None
+                    "date": date.strftime("%Y-%m-%d")
                 })
-            elif title or url: 
-                self.log.debug(f"Partially parsed item (missing title or url): Title='{title}', URL='{url}'")
+            elif title or url:
+                self.log.debug(f"Skipping result without date: Title='{title}', URL='{url}'")
+
 
 
         if not results and html: 
@@ -305,26 +307,20 @@ class WebScraping:
 
     def search_bing(self, query: str, num_results: int = DEFAULT_NUM_RESULTS, search_type: str = 'news') -> List[Dict[str, str]]:
         """
-        Now passes the 'session' object to parse_bing_results.
+        Keeps fetching pages until 'num_results' WITH DATES are collected.
+        Skips results without dates entirely.
         """
         results: List[Dict[str, str]] = []
+        per_page = 10
+        page = 0
 
         with StealthSession() as session:
             if hasattr(session, "headers"):
                 session.headers.setdefault("User-Agent", self.USER_AGENT_FALLBACK)
 
-            per_page = 10
-            pages = max(1, (num_results + per_page - 1) // per_page)
-
-            for page in range(pages):
+            while len(results) < num_results:
                 first = page * per_page + 1
-                
-                url = ""
-                if search_type == 'news':
-                    url = self.build_bing_search_url(query, first)
-                else: 
-                    url = self.build_bing_search_url(query, first)
-                
+                url = self.build_bing_search_url(query, first)
 
                 try:
                     resp = session.get(url, timeout=15)
@@ -334,21 +330,29 @@ class WebScraping:
 
                 if getattr(resp, "status_code", 200) != 200:
                     self.log.warning(f"Non-200 response: {resp.status_code}")
-                    continue
+                    break
 
                 html = getattr(resp, "text", "")
-                
                 page_results = self.parse_bing_results(html, search_type=search_type, session=session)
-                results.extend(page_results)
 
+                # Only keep those with valid dates
+                dated_results = [r for r in page_results if r.get("date")]
+
+                self.log.info(f"Parsed {len(page_results)} results from page {page+1}, {len(dated_results)} with dates.")
+
+                results.extend(dated_results)
+
+                if not page_results:
+                    self.log.warning("No results found on this page. Stopping search.")
+                    break
+
+                # Stop if we’ve reached the goal
                 if len(results) >= num_results:
                     break
-                
-                if not page_results:
-                    self.log.warning("No results found on page, stopping.")
-                    break
 
+                # Delay and move to next page
                 self.random_delay()
+                page += 1
 
         return results[:num_results]
 
