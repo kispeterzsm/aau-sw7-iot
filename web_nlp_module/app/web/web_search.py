@@ -3,12 +3,11 @@ import time
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from urllib.parse import quote_plus, parse_qs, urlparse, unquote
 from bs4 import BeautifulSoup
 from stealth_requests import StealthSession
 import json
-
 
 class WebScraping:
     DEFAULT_NUM_RESULTS = 100
@@ -196,12 +195,14 @@ class WebScraping:
         return None
 
 
-    def parse_bing_results(self, html: str, search_type: str, session: StealthSession) -> List[Dict[str, str]]:
+    def parse_bing_results(self, html: str, search_type: str, session: StealthSession) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
         Now accepts the 'session' object to pass to the webpage fallback parser.
+        Returns two lists: (results_with_date, websites_without_date)
         """
         soup = BeautifulSoup(html, "lxml")
-        results = []
+        results_with_date = []
+        websites = []
 
         container_selectors = ".news-card, li.b_algo"
         if search_type == 'web':
@@ -287,30 +288,33 @@ class WebScraping:
                 if date_from_page:
                     date = date_from_page
 
-            # Only add if both title, url, and a valid date exist
+            # Sort into the correct list
             if title and url and date:
-                results.append({
+                results_with_date.append({
                     "title": title,
                     "url": url,
                     "snippet": snippet,
                     "date": date.strftime("%Y-%m-%d")
                 })
-            elif title or url:
-                self.log.debug(f"Skipping result without date: Title='{title}', URL='{url}'")
+            elif title or url: # Add to the 'websites' list
+                websites.append({
+                    "title": title,
+                    "url": url,
+                    "snippet": snippet
+                })
 
-
-
-        if not results and html: 
+        if not results_with_date and not websites and html: 
             self.log.warning(f"No results parsed from page. Container selectors '{container_selectors}' might be outdated.")
 
-        return results
+        return results_with_date, websites
 
-    def search_bing(self, query: str, num_results: int = DEFAULT_NUM_RESULTS, search_type: str = 'news') -> List[Dict[str, str]]:
+    def search_bing(self, query: str, num_results: int = DEFAULT_NUM_RESULTS, num_undated_target: int = 10, search_type: str = 'news') -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
-        Keeps fetching pages until 'num_results' WITH DATES are collected.
-        Skips results without dates entirely.
+        Keeps fetching pages until 'num_results' (dated) AND 'num_undated_target' (undated) are collected.
+        Returns two lists: (results_with_dates, websites_without_dates)
         """
-        results: List[Dict[str, str]] = []
+        results_with_dates: List[Dict[str, str]] = []
+        websites_without_dates: List[Dict[str, str]] = []
         per_page = 10
         page = 0
 
@@ -318,7 +322,8 @@ class WebScraping:
             if hasattr(session, "headers"):
                 session.headers.setdefault("User-Agent", self.USER_AGENT_FALLBACK)
 
-            while len(results) < num_results:
+            # Loop until we meet both targets OR we run out of pages
+            while len(results_with_dates) < num_results or len(websites_without_dates) < num_undated_target:
                 first = page * per_page + 1
                 url = self.build_bing_search_url(query, first)
 
@@ -333,28 +338,29 @@ class WebScraping:
                     break
 
                 html = getattr(resp, "text", "")
-                page_results = self.parse_bing_results(html, search_type=search_type, session=session)
+                
+                page_dated_results, page_undated_websites = self.parse_bing_results(
+                    html, search_type=search_type, session=session
+                )
 
-                # Only keep those with valid dates
-                dated_results = [r for r in page_results if r.get("date")]
-
-                self.log.info(f"Parsed {len(page_results)} results from page {page+1}, {len(dated_results)} with dates.")
-
-                results.extend(dated_results)
-
-                if not page_results:
+                # Check if the page returned nothing at all
+                if not page_dated_results and not page_undated_websites:
                     self.log.warning("No results found on this page. Stopping search.")
                     break
 
-                # Stop if we’ve reached the goal
-                if len(results) >= num_results:
+                # Add new results to our main lists
+                results_with_dates.extend(page_dated_results)
+                websites_without_dates.extend(page_undated_websites)
+
+                if len(results_with_dates) >= num_results and len(websites_without_dates) >= num_undated_target:
+                    self.log.info("Both dated and undated result targets met. Stopping search.")
                     break
 
-                # Delay and move to next page
                 self.random_delay()
                 page += 1
 
-        return results[:num_results]
+        # Returns both lists
+        return results_with_dates[:num_results], websites_without_dates[:num_undated_target]
 
     @staticmethod
     def get_oldest_result(results: List[Dict[str, str]]) -> Optional[Dict[str, str]]:
