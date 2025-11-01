@@ -67,18 +67,21 @@ cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
 overlay
 br_netfilter
 EOF
+```
 
-containerd also requires a few system parameters, which we can set and persist using the command 
+Containerd also requires a few system parameters, which we can set and persist using the command 
 
+```bash
 cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes-cri.conf
 net.bridge.bridge-nf-call-iptables  = 1
 net.ipv4.ip_forward                 = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 EOF # Persist system parameters for containerd
+```
 
 
+```bash
 sudo sysctl --system # Apply those settings without rebooting using the command
-
 
 # Prerequisites for containerd are in place, so we can install it through apt-get:
 sudo apt-get update  # Update the package list
@@ -88,9 +91,11 @@ sudo apt-get install -y containerd # Install containerd
 
 sudo mkdir -p /etc/containerd # Create the /etc/containerd directory
 sudo containerd config default | sudo tee /etc/containerd/config.toml # Generate a configuration file for containerd using containerd itself
+```
+In this file, we must set the cgroup driver for containerd to system as this is required for the kubelet
 
-# In this file, we must set the cgroup driver for containerd to system as this is required for the kubelet
-
+Choose your favorite file editor, for this case we chose nano:
+```bash
 sudo nano /etc/containerd/config.toml # Open the file /etc/containerd/config.toml in a text editor as root
 ```
 
@@ -115,11 +120,11 @@ sudo systemctl status containerd
 ### Installing and Configuring Kubernetes Packages
 
 ```bash
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - # We will install packages from the Google repository, so we will need to add Google’s apt repository gpg key first
 
-sudo bash -c 'cat <<EOF >/etc/apt/sources.list.d/kubernetes.list 
-deb https://apt.kubernetes.io/ kubernetes-xenial main
-EOF' # With that key in place, we can also add the Kubernetes apt repository
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
 
 sudo apt-get update
 apt-cache policy kubelet | head -n 20 # verify which kubelet versions are available and which one is installed
@@ -131,11 +136,11 @@ sudo apt-get install -y kubelet kubeadm kubectl # This will install the latest v
 
 sudo apt-mark hold kubelet kubeadm kubectl containerd # To avoid automatic updates, we mark those tools
 
-sudo systemctl status kubelet.service # Check the status of our kubelet and our container runtime
 sudo systemctl status containerd.service
+sudo systemctl status kubelet.service # Check the status of our kubelet and our container runtime
 
+sudo systemctl enable containerd.service
 sudo systemctl enable kubelet.service # Also make sure that both services are set to start when the system starts up
-sudo systemctl enable containerd.servicerd
 ```
 
 ## Creating a Control Plane
