@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Fact Checker",
+  "name": "IOT",
   "version": "1.0",
-  "description": "Highlight and fact-check sentences on web pages",
+  "description": "Information Origin Tracker",
   "permissions": [
     "activeTab",
     "scripting"
