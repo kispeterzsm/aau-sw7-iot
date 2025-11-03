@@ -21,7 +21,7 @@ document.getElementById('factCheckBtn').addEventListener('click', async () => {
     }
 
     // Send request to backend
-    const response = await fetch('https://retaliatory-bruna-unofficious.ngrok-free.dev/', {
+    const response = await fetch('https://retaliatory-bruna-unofficious.ngrok-free.dev/link/all', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
