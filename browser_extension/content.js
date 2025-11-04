@@ -13,7 +13,7 @@ function highlightSentences(results) {
 
   results.forEach((item, index) => {
     const sentence = item.sentence;
-    const oldest = item.oldest;
+    const oldest = item.oldest_result;
     
     if (!sentence || !oldest) return;
 

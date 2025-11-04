@@ -25,6 +25,7 @@ document.getElementById('factCheckBtn').addEventListener('click', async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-auth-token': ''
       },
       body: JSON.stringify({
         input: tab.url,
