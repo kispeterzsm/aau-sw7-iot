@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from nlp import NLP_Pipeline
 from web import get_site_data, WebScraping
@@ -7,6 +8,11 @@ from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
 import torch
 import asyncio
+from fastapi import Request
+from dotenv import load_dotenv
+
+# load env variables
+load_dotenv()
 
 # models list
 ml_models = {}
@@ -31,6 +37,17 @@ async def lifespan(app: FastAPI):
     torch.cuda.empty_cache()
 
 app = FastAPI(title="NLP Service", lifespan=lifespan)
+
+
+AUTH_TOKEN_NGROK = os.getenv("AUTH_TOKEN_NGROK")
+
+@app.middleware("http")
+async def verify_token(request: Request, call_next):
+    token = request.headers.get("x-auth-token")
+    if token != AUTH_TOKEN_NGROK:
+        return JSONResponse(status_code=403, content={"error": "Forbidden: Invalid or missing token"})
+    response = await call_next(request)
+    return response
 
 class Input(BaseModel):
     input: str
@@ -101,6 +118,11 @@ async def link_all(data: Input):
         
         query["news_results"] = results_with_dates
         query["website_results"] = websites_without_dates
+        
+        # Combine lists to find the overall oldest
+        all_results = results_with_dates + websites_without_dates
+        query["oldest_result"] = await asyncio.to_thread(scraper.get_oldest_result, all_results)
+        
 
     return {"warning": None, "result": queries}
 
@@ -126,6 +148,11 @@ async def text_all(data: Input):
         
         query["news_results"] = results_with_dates
         query["website_results"] = websites_without_dates
+
+        # Combine lists to find the overall oldest
+        all_results = results_with_dates + websites_without_dates
+        query["oldest_result"] = await asyncio.to_thread(scraper.get_oldest_result, all_results)
+        
     
     return {"warning": processed_input["warning"], "result": queries}
 
@@ -151,6 +178,9 @@ async def link_news(data: Input):
             search_type='news'
         )
         query["results"] = results_with_dates
+        
+        query["oldest_result"] = await asyncio.to_thread(scraper.get_oldest_result, results_with_dates)
+        
 
     return {"warning": None, "result": queries}
 
@@ -175,6 +205,9 @@ async def link_websites(data: Input):
             search_type='web'
         )
         query["results"] = websites_without_dates
+        
+        query["oldest_result"] = await asyncio.to_thread(scraper.get_oldest_result, websites_without_dates)
+        
 
     return {"warning": None, "result": queries}
 
@@ -197,6 +230,9 @@ async def text_news(data: Input):
             search_type='news'
         )
         query["results"] = results_with_dates
+
+        query["oldest_result"] = await asyncio.to_thread(scraper.get_oldest_result, results_with_dates)
+        
     
     return {"warning": processed_input["warning"], "result": queries}
 
@@ -220,5 +256,7 @@ async def text_websites(data: Input):
             search_type='web'
         )
         query["results"] = websites_without_dates
-    
+        
+        query["oldest_result"] = await asyncio.to_thread(scraper.get_oldest_result, websites_without_dates)
+        
     return {"warning": processed_input["warning"], "result": queries}
