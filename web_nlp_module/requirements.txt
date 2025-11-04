@@ -14,3 +14,4 @@ lxml
 stealth-requests
 accelerate
 bitsandbytes
+python-dotenv
