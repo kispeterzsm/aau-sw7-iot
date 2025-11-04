@@ -172,21 +172,37 @@ function removeHighlights() {
 }
 
 // Handle hover events for showing tooltip
-document.addEventListener('mouseover', (e) => {
+//document.addEventListener('mouseover', (e) => {
+//  if (e.target.classList.contains('factcheck-highlight')) {
+//    showTooltip(e.target, e);
+//  }
+//});
+
+//document.addEventListener('mouseout', (e) => {
+//  if (e.target.classList.contains('factcheck-highlight')) {
+//    hideTooltip();
+//  }
+//});
+
+document.addEventListener('click', (e) => {
   if (e.target.classList.contains('factcheck-highlight')) {
-    showTooltip(e.target, e);
+    // If the tooltip is already visible, hide it
+    if (e.target.dataset.tooltipVisible === 'true') {
+      hideTooltip();
+      e.target.dataset.tooltipVisible = 'false';
+    } 
+    // Otherwise, show it
+    else {
+      showTooltip(e.target, e);
+      e.target.dataset.tooltipVisible = 'true';
+    }
   }
 });
 
-document.addEventListener('mouseout', (e) => {
-  if (e.target.classList.contains('factcheck-highlight')) {
-    hideTooltip();
-  }
-});
 
 function showTooltip(element, event) {
   // Remove existing tooltip
-  hideTooltip();
+  //hideTooltip();
   
   const title = element.getAttribute('data-title');
   const url = element.getAttribute('data-url');
