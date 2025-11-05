@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-nlp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-nlp
+  template:
+    metadata:
+      labels:
+        app: web-nlp
+    spec:
+      containers:
+        - name: web-nlp
+          image: web-nlp:latest
+          imagePullPolicy: Never
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-secret
+                  key: HF_TOKEN
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              nvidia.com/gpu: 1
