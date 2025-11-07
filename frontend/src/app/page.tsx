@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import SearchPanel from "./components/SearchPanel";
 import ResultsList from "./components/ResultsList";
 import TimelinePanel from "./components/TimelinePanel";
@@ -158,6 +158,63 @@ export default function Page() {
 
   const avgConfidence = useMemo(() => (results.length ? Math.round((results.reduce((s, r) => s + r.confidence, 0) / results.length) * 100) : 0), [results]);
 
+  const onSearch = async (e?: React.FormEvent) => 
+  {
+    e?.preventDefault();
+    setIsSearching(true);
+    setError(null);
+    setProgress(0);
+    setStatus("processing");
+
+    try 
+    {
+      const payload = 
+      {
+        input: input || "https://example.com",
+        search_depth: 25,
+      };
+
+      console.log("📤 Sending payload:", payload);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const response = await fetch(`${apiUrl}/link/websites`,
+      {
+        method: "POST",
+        headers: 
+        {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) 
+      {
+        const errText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errText}`);
+      }
+
+      const data = await response.json();
+      console.log("📥 Received data:", data);
+
+      // Example: store or display results
+      setResults(data.result);
+      setProgress(100);
+      setStatus("processing");
+    }
+
+    catch (err: any) 
+    {
+      console.error("❌ Search failed:", err);
+      setError(err.message);
+      setStatus("failed");
+    } 
+
+    finally 
+    {
+      setIsSearching(false);
+    }
+
+  };
 
   return (
     <main className="min-h-screen bg-background text-foreground transition-colors duration-300 antialiased">
@@ -187,7 +244,7 @@ export default function Page() {
           <SearchPanel
             input={input}
             setInput={setInput}
-            onSearch={handleSearch}
+            onSearch={onSearch}
             // onCancel={handleCancel}
             isSearching={isSearching}
             progress={progress}

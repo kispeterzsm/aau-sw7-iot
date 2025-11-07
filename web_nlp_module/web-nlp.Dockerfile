@@ -11,8 +11,8 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 WORKDIR /app
 
 # Copy files
-COPY app/ /app/
-COPY requirements.txt .
+COPY /web_nlp_module/app/ /app/
+COPY /web_nlp_module/requirements.txt .
 
 # Avoid dependency resolution errors
 RUN pip install --upgrade pip

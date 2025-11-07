@@ -52,7 +52,7 @@ export default function DarkModeToggle() {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <span className="text-sm sr-only">Toggle dark mode</span>
 
       <button
@@ -60,8 +60,8 @@ export default function DarkModeToggle() {
         aria-pressed={isDark}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         className={
-          "relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 " +
-          (isDark ? "bg-slate-700" : "bg-gray-300")
+          "cursor-pointer relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 " +
+          (isDark ? "bg-slate-600" : "bg-gray-300")
         }
       >
         <span
@@ -72,7 +72,7 @@ export default function DarkModeToggle() {
         />
       </button>
 
-      <div className="text-xs select-none">
+      <div className="text-base select-none">
         {isDark ? "🌙" : "🔆"}
       </div>
     </div>

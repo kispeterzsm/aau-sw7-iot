@@ -42,3 +42,12 @@ next-env.d.ts
 
 # python local environment
 /venv
+*__pycache__*
+*pyvenv.cfg
+
+# frontend folders
+/frontend/.next
+/frontend/node_modules
+
+# webnlp modules
+/web_nlp_module/webnlp
