@@ -8,6 +8,9 @@ from urllib.parse import quote_plus, parse_qs, urlparse, unquote
 from bs4 import BeautifulSoup
 from stealth_requests import StealthSession
 import json
+from deep_translator import GoogleTranslator
+from langdetect import detect, DetectorFactory
+from langdetect.lang_detect_exception import LangDetectException
 
 class WebScraping:
     DEFAULT_NUM_RESULTS = 100
@@ -22,6 +25,37 @@ class WebScraping:
         self.log = logging.getLogger("WebScraping")
         logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO,
                             format="%(asctime)s [%(levelname)s] %(message)s")
+
+    def _translate_result(self, title: str, snippet: str) -> Tuple[str, str, Optional[str]]:
+        """
+        Translates title and snippet if they are not in English.
+        Returns: (translated_title, translated_snippet, original_lang_code)
+        """
+        if not title:
+            return title, snippet, None
+
+        try:
+            lang = detect(title)
+            
+            if lang == 'en':
+                return title, snippet, None
+            
+            translator = GoogleTranslator(source='auto', target='en')
+            
+            translated_title = translator.translate(title) if title else ""
+            translated_snippet = translator.translate(snippet) if snippet else ""
+            
+            # If translation fails return original
+            if not translated_title:
+                return title, snippet, None
+                
+            return translated_title, translated_snippet, lang
+
+        except LangDetectException:
+            return title, snippet, None
+        except Exception as e:
+            self.log.warning(f"Translation failed for '{title}': {e}")
+            return title, snippet, None
 
     @staticmethod
     def random_delay():
@@ -270,7 +304,15 @@ class WebScraping:
                 self.log.warning(f"Error parsing item structure: {e} - HTML: {item.prettify()[:200]}")
                 continue
 
-            # Final date parsin attempt
+            original_title_text = title
+            original_snippet_text = snippet
+
+            translated_title, translated_snippet, original_lang = self._translate_result(original_title_text, original_snippet_text)
+            
+            title = translated_title
+            snippet = translated_snippet
+
+            # Final date parsing attempt
             if not date and date_text:
                 parsed_dt_final = self.parse_date(date_text)
                 if parsed_dt_final:
@@ -278,7 +320,8 @@ class WebScraping:
 
             # Final fallback: Parse the snippet text
             if not date and snippet:
-                parsed_dt_snippet = self.parse_date(snippet)
+                snippet_to_parse_date = original_snippet_text if original_lang else snippet
+                parsed_dt_snippet = self.parse_date(snippet_to_parse_date)
                 if parsed_dt_snippet:
                     date = parsed_dt_snippet
             
@@ -290,18 +333,32 @@ class WebScraping:
 
             # Sort into the correct list
             if title and url and date:
-                results_with_date.append({
+                result_data = {
                     "title": title,
                     "url": url,
                     "snippet": snippet,
                     "date": date.strftime("%Y-%m-%d")
-                })
+                }
+                
+                if original_lang:
+                    result_data["title"] = f"{title} (original language source: {original_lang})"
+                    result_data["original_title"] = original_title_text 
+                    result_data["original_language"] = original_lang
+                
+                results_with_date.append(result_data)
+                
             elif title or url: # Add to the 'websites' list
-                websites.append({
+                web_data = {
                     "title": title,
                     "url": url,
                     "snippet": snippet
-                })
+                }
+                if original_lang:
+                    web_data["title"] = f"{title} (original language source: {original_lang})"
+                    web_data["original_title"] = original_title_text
+                    web_data["original_language"] = original_lang
+                    
+                websites.append(web_data)
 
         if not results_with_date and not websites and html: 
             self.log.warning(f"No results parsed from page. Container selectors '{container_selectors}' might be outdated.")

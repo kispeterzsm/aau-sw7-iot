@@ -14,3 +14,5 @@ lxml
 stealth-requests
 accelerate
 bitsandbytes
+deep_translator
+langdetect
