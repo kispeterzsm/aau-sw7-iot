@@ -14,4 +14,5 @@ lxml
 stealth-requests
 accelerate
 bitsandbytes
-python-dotenv
+deep_translator
+langdetect
