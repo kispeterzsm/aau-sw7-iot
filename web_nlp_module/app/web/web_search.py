@@ -4,13 +4,15 @@ import logging
 import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
-from urllib.parse import quote_plus, parse_qs, urlparse, unquote
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 from bs4 import BeautifulSoup
 from stealth_requests import StealthSession
 import json
 from deep_translator import GoogleTranslator
-from langdetect import detect, DetectorFactory
-from langdetect.lang_detect_exception import LangDetectException
+from langdetect import detect, DetectorFactory, LangDetectException
+
+# Fixes langdetect inconsistency
+DetectorFactory.seed = 0
 
 class WebScraping:
     DEFAULT_NUM_RESULTS = 100
@@ -23,8 +25,10 @@ class WebScraping:
 
     def __init__(self, verbose: bool = False):
         self.log = logging.getLogger("WebScraping")
-        logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO,
-                            format="%(asctime)s [%(levelname)s] %(message)s")
+        logging.basicConfig(
+            level=logging.DEBUG if verbose else logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s"
+        )
 
     def _translate_result(self, title: str, snippet: str) -> Tuple[str, str, Optional[str]]:
         """
@@ -39,18 +43,14 @@ class WebScraping:
             
             if lang == 'en':
                 return title, snippet, None
-            
+
             translator = GoogleTranslator(source='auto', target='en')
-            
-            translated_title = translator.translate(title) if title else ""
-            translated_snippet = translator.translate(snippet) if snippet else ""
-            
-            # If translation fails return original
+            to_translate = [title or "", snippet or ""]
+            translations = translator.translate_batch(to_translate)
+            translated_title, translated_snippet = translations[0], translations[1]
             if not translated_title:
                 return title, snippet, None
-                
             return translated_title, translated_snippet, lang
-
         except LangDetectException:
             return title, snippet, None
         except Exception as e:
@@ -62,9 +62,12 @@ class WebScraping:
         time.sleep(random.uniform(*WebScraping.DELAY_RANGE))
 
     @staticmethod
-    def build_bing_search_url(query: str, first: int = 0) -> str:
+    def build_bing_search_url(query: str, first: int = 0, market: Optional[str] = None) -> str:
         safe_q = quote_plus(query)
-        return f"https://www.bing.com/search?q={safe_q}&first={first}"
+        url = f"https://www.bing.com/search?q={safe_q}&first={first}"
+        if market:
+            url += f"&mkt={market}"
+        return url
 
     @staticmethod
     def parse_date(text: str) -> Optional[datetime]:
@@ -228,7 +231,6 @@ class WebScraping:
         #self.log.debug(f"No date found for {url} using webpage fallback.")
         return None
 
-
     def parse_bing_results(self, html: str, search_type: str, session: StealthSession) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
         Now accepts the 'session' object to pass to the webpage fallback parser.
@@ -365,24 +367,37 @@ class WebScraping:
 
         return results_with_date, websites
 
-    def search_bing(self, query: str, num_results: int = DEFAULT_NUM_RESULTS, num_undated_target: int = 10, search_type: str = 'news') -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
+    def search_bing(
+        self,
+        query: str,
+        num_results: int = DEFAULT_NUM_RESULTS,
+        num_undated_target: int = 10,
+        search_type: str = 'news',
+        market: Optional[str] = None
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
-        Keeps fetching pages until 'num_results' (dated) AND 'num_undated_target' (undated) are collected.
-        Returns two lists: (results_with_dates, websites_without_dates)
+        - Detects language and sets region.
+        - User can override market.
+        - If detection fails, fallback to english (standard).
         """
         results_with_dates: List[Dict[str, str]] = []
         websites_without_dates: List[Dict[str, str]] = []
         per_page = 10
         page = 0
 
+        final_market = market
+        if final_market is None:
+            self.log.warning(f"Language detection failed for '{query}', using default market 'en-US'.")
+            final_market = "en-US"
+
         with StealthSession() as session:
             if hasattr(session, "headers"):
                 session.headers.setdefault("User-Agent", self.USER_AGENT_FALLBACK)
 
-            # Loop until we meet both targets OR we run out of pages
             while len(results_with_dates) < num_results or len(websites_without_dates) < num_undated_target:
                 first = page * per_page + 1
-                url = self.build_bing_search_url(query, first)
+                url = self.build_bing_search_url(query, first, market=final_market)
+                self.log.info(f"Fetching {url} ...")
 
                 try:
                     resp = session.get(url, timeout=15)
@@ -395,17 +410,14 @@ class WebScraping:
                     break
 
                 html = getattr(resp, "text", "")
-                
                 page_dated_results, page_undated_websites = self.parse_bing_results(
                     html, search_type=search_type, session=session
                 )
 
-                # Check if the page returned nothing at all
                 if not page_dated_results and not page_undated_websites:
                     self.log.warning("No results found on this page. Stopping search.")
                     break
 
-                # Add new results to our main lists
                 results_with_dates.extend(page_dated_results)
                 websites_without_dates.extend(page_undated_websites)
 
@@ -416,7 +428,6 @@ class WebScraping:
                 self.random_delay()
                 page += 1
 
-        # Returns both lists
         return results_with_dates[:num_results], websites_without_dates[:num_undated_target]
 
     @staticmethod
