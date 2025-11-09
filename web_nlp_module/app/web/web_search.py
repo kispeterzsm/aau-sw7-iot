@@ -382,6 +382,8 @@ class WebScraping:
         """
         results_with_dates: List[Dict[str, str]] = []
         websites_without_dates: List[Dict[str, str]] = []
+
+        seen_urls = set()
         per_page = 10
         page = 0
 
@@ -418,8 +420,17 @@ class WebScraping:
                     self.log.warning("No results found on this page. Stopping search.")
                     break
 
-                results_with_dates.extend(page_dated_results)
-                websites_without_dates.extend(page_undated_websites)
+
+                # Add to the list only different urls, prevents duplication
+                for result in page_dated_results:
+                    if result['url'] not in seen_urls and len(results_with_dates) < num_results:
+                        results_with_dates.append(result)
+                        seen_urls.add(result['url'])
+
+                for result in page_undated_websites:
+                    if result['url'] not in seen_urls and len(websites_without_dates) < num_undated_target:
+                        websites_without_dates.append(result)
+                        seen_urls.add(result['url'])
 
                 if len(results_with_dates) >= num_results and len(websites_without_dates) >= num_undated_target:
                     self.log.info("Both dated and undated result targets met. Stopping search.")
