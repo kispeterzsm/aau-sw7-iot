@@ -6,6 +6,7 @@ import ResultsList from "./components/ResultsList";
 import TimelinePanel from "./components/TimelinePanel";
 import { ResultItem, JobStatus } from "./components/types";
 import DarkModeToggle from "./components/DarkModeToggle";
+import Navbar from "./components/Navbar";
 
 export default function Page() {
   const [mounted, setMounted] = useState(false);
@@ -162,24 +163,7 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-background text-foreground transition-colors duration-300 antialiased">
       {/* Top hero header */}
-      <header className="sticky top-0 z-40 border-b border-gray-300 dark:border-slate-700 bg-background/80 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-3xl bg-emerald-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md">
-              IOT
-            </div>
-            <div>
-              <div className="text-xl font-semibold tracking-tight">
-                Information Origin Tracker
-              </div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                Provenance & origin tracker for online claims
-              </div>
-            </div>
-          </div>
-          <DarkModeToggle />
-        </div>
-      </header>
+      <Navbar/>
 
       {/* Main layout */}
       <section className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
