@@ -5,7 +5,6 @@ import SearchPanel from "./components/SearchPanel";
 import ResultsList from "./components/ResultsList";
 import TimelinePanel from "./components/TimelinePanel";
 import { ResultItem, JobStatus } from "./components/types";
-import DarkModeToggle from "./components/DarkModeToggle";
 import Navbar from "./components/Navbar";
 
 export default function Page() {
@@ -22,68 +21,146 @@ export default function Page() {
 
   const subscriptionRef = useRef<number | null>(null);
 
-  // ... (all your functions like createJob, generateResults, etc. remain the same)
-  // No changes are needed in the component's logic
   useEffect(() => {
     setMounted(true);
+    loadTopNews();
     return () => {
       if (subscriptionRef.current) window.clearInterval(subscriptionRef.current);
     };
   }, []);
 
-  function createJob() {
-    return new Promise<{ jobId: string }>((resolve) => setTimeout(() => resolve({ jobId: `job_${Date.now()}` }), 220));
+  // API 1: Get Top News
+  async function loadTopNews(limit: number = 5) {
+    try {
+      const response = await fetch(`http://127.0.0.1:8999/news/top?limit=${limit}`);
+      if (!response.ok) throw new Error('Failed to fetch top news');
+      
+      const data = await response.json();
+      
+      const newsResults: ResultItem[] = data.items.map((item: any, index: number) => ({
+        id: `news-${index}-${Date.now()}`,
+        url: item.url,
+        title: item.title,
+        domain: new URL(item.url).hostname,
+        published: item.published_at,
+        snippet: item.title,
+        confidence: 0.85,
+      }));
+
+      setResults(newsResults);
+    } catch (err) {
+      console.error('Error loading top news:', err);
+    }
   }
 
-  function generateResults(n = 3): ResultItem[] {
-    const base = [
-      {
-        id: `r-${Math.random().toString(36).slice(2, 8)}`,
-        url: "https://example.com/article-1",
-        title: "Investigative piece reveals core claim",
-        domain: "example.com",
-        published: "2023-01-10T08:00:00Z",
-        snippet: "This sentence exactly matches the submitted claim and includes context to judge it.",
-        confidence: 0.92,
-      },
-      {
-        id: `r-${Math.random().toString(36).slice(2, 8)}`,
-        url: "https://news.site/article-22",
-        title: "Regional news reports the claim",
-        domain: "news.site",
-        published: "2023-01-12T09:00:00Z",
-        snippet: "A news outlet that picked up the story and summarized the claim.",
-        confidence: 0.78,
-      },
-      {
-        id: `r-${Math.random().toString(36).slice(2, 8)}`,
-        url: "https://blog.example/post-333",
-        title: "Opinion blog referencing the claim",
-        domain: "blog.example",
-        published: "2023-02-02T10:00:00Z",
-        snippet: "A blog post offering opinion and citing earlier sources.",
-        confidence: 0.61,
-      },
-    ];
-    return Array.from({ length: n }).map((_, i) => ({ ...base[i % base.length], id: `r-${Date.now()}-${i}` }));
+  // API 2: Analyze URL - Using /search/link
+  async function analyzeURL(url: string, searchDepth: number = 2): Promise<ResultItem[]> {
+    try {
+      const response = await fetch('http://127.0.0.1:8999/search/link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: url,
+          search_depth: searchDepth
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return transformSearchResults(data);
+    } catch (error) {
+      console.error('Failed to analyze URL:', error);
+      throw error;
+    }
   }
 
-  function subscribeToJob(jobId: string, onUpdate: (data: { status: JobStatus; progress?: number; partial?: ResultItem[] }) => void) {
+  // API 3: Analyze Text - Using /search/text
+  async function analyzeText(text: string, searchDepth: number = 2): Promise<ResultItem[]> {
+    try {
+      const response = await fetch('http://127.0.0.1:8999/search/text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: text,
+          search_depth: searchDepth
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return transformSearchResults(data);
+    } catch (error) {
+      console.error('Failed to analyze text:', error);
+      throw error;
+    }
+  }
+
+  // Transform both /search/link and /search/text responses
+  function transformSearchResults(apiData: any): ResultItem[] {
+    console.log('Transforming search results:', apiData);
+    
+    // Handle the expected response structure
+    if (!apiData.data?.result) {
+      console.warn('No result data found in response');
+      return [];
+    }
+
+    const results: ResultItem[] = [];
+
+    apiData.data.result.forEach((section: any, sectionIndex: number) => {
+      // Handle both structures: section.results and section.news_results/website_results
+      const resultsArray = section.results || section.news_results || section.website_results || [];
+      
+      resultsArray.forEach((result: any, resultIndex: number) => {
+        results.push({
+          id: `result-${sectionIndex}-${resultIndex}-${Date.now()}`,
+          url: result.url,
+          title: result.title,
+          domain: new URL(result.url).hostname,
+          published: result.date ? `${result.date}T00:00:00Z` : new Date().toISOString(),
+          snippet: result.snippet || result.title,
+          confidence: calculateConfidence(result),
+        });
+      });
+    });
+
+    // Sort by date (earliest first)
+    return results.sort((a, b) => new Date(a.published).getTime() - new Date(b.published).getTime());
+  }
+
+  function calculateConfidence(result: any): number {
+    let confidence = 0.7;
+    if (result.date) confidence += 0.2;
+    if (result.snippet && result.snippet.length > 50) confidence += 0.1;
+    return Math.min(confidence, 0.95);
+  }
+
+  // Progress simulation
+  function simulateProgress(onUpdate: (progress: number, status: JobStatus) => void) {
     let localProgress = 0;
     const interval = window.setInterval(() => {
-      localProgress += 9 + Math.round(Math.random() * 8);
+      localProgress += 10 + Math.round(Math.random() * 15);
       if (localProgress >= 100) {
-        onUpdate({ status: "completed", progress: 100, partial: generateResults(6) });
+        onUpdate(100, "completed");
         window.clearInterval(interval);
       } else {
-        const partial = Math.random() > 0.55 ? generateResults(1) : [];
-        onUpdate({ status: "processing", progress: Math.min(localProgress, 99), partial });
+        onUpdate(Math.min(localProgress, 95), "processing");
       }
-    }, 650 + Math.random() * 450);
+    }, 500);
     return interval;
   }
 
-
+  // Main search handler - now supports both URLs and Text
   async function handleSearch(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
@@ -100,50 +177,45 @@ export default function Page() {
     setStatus("queued");
 
     try {
-      const { jobId } = await createJob();
+      const isURL = trimmed.startsWith('http://') || trimmed.startsWith('https://');
+
+      // Start progress simulation
+      const jobId = `job_${Date.now()}`;
       setJobId(jobId);
-      const handle = subscribeToJob(jobId, (update) => {
-        setStatus(update.status);
-        if (typeof update.progress === "number") setProgress(update.progress);
-        if (update.partial && update.partial.length) {
-          setResults((s) => {
-            const urls = new Set(s.map((r) => r.url));
-            const merged = [...s];
-            for (const it of update.partial!) if (!urls.has(it.url)) merged.push(it);
-            merged.sort((a, b) => new Date(a.published).getTime() - new Date(b.published).getTime());
-            return merged;
-          });
-        }
-        if (update.status === "completed") {
-          const final = generateResults(8).sort((a, b) => new Date(a.published).getTime() - new Date(b.published).getTime());
-          setTimeout(() => {
-            setResults(final);
-            setProgress(100);
-            setIsSearching(false);
-          }, 320);
-        }
+      
+      const handle = simulateProgress((progress, status) => {
+        setStatus(status);
+        setProgress(progress);
       });
+
       subscriptionRef.current = handle;
+
+      // Use appropriate API based on input type
+      let analysisResults: ResultItem[];
+      if (isURL) {
+        analysisResults = await analyzeURL(trimmed, 2);
+      } else {
+        analysisResults = await analyzeText(trimmed, 2);
+      }
+      
+      // Clear simulation and set results
+      if (subscriptionRef.current) {
+        window.clearInterval(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+      
+      setResults(analysisResults);
+      setProgress(100);
+      setStatus("completed");
+      
     } catch (err: any) {
-      setError(err?.message || "Unknown error");
-      setIsSearching(false);
+      setError(err?.message || "Analysis failed. Make sure backend is running on port 8999.");
       setStatus("failed");
+    
+    } finally {
+      setIsSearching(false);
     }
   }
-
-  // cancel logic (mock)
-  // async function handleCancel() {
-  //   if (!jobId) return;
-  //   if (subscriptionRef.current) {
-  //     window.clearInterval(subscriptionRef.current);
-  //     subscriptionRef.current = null;
-  //   }
-
-  //   setStatus("failed");
-  //   setIsSearching(false);
-  //   setProgress(0);
-  //   setError("Search cancelled by user.");
-  // }
 
   async function copyLink(url: string) {
     try {
@@ -159,20 +231,16 @@ export default function Page() {
 
   const avgConfidence = useMemo(() => (results.length ? Math.round((results.reduce((s, r) => s + r.confidence, 0) / results.length) * 100) : 0), [results]);
 
-
   return (
     <main className="min-h-screen bg-background text-foreground transition-colors duration-300 antialiased">
-      {/* Top hero header */}
       <Navbar/>
 
-      {/* Main layout */}
       <section className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-4">
           <SearchPanel
             input={input}
             setInput={setInput}
             onSearch={handleSearch}
-            // onCancel={handleCancel}
             isSearching={isSearching}
             progress={progress}
             status={status}
@@ -196,7 +264,6 @@ export default function Page() {
         </aside>
       </section>
       
-      {/* Snapshot modal (no animations) */}
       {snapshotUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSnapshotUrl(null)} />

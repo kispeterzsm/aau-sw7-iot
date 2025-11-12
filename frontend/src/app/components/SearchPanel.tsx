@@ -38,7 +38,7 @@ export default function SearchPanel({
                 <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder={`e.g. "The Earth is flat" or https://news.site/article-123`}
+                    placeholder="Paste a URL to analyze its information origins (e.g., https://news.site/article-123)"
                     className="w-full min-h-[140px] p-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-background shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-500/50 text-sm resize-none"
                 />
 
@@ -54,13 +54,17 @@ export default function SearchPanel({
                         <span className="text-sm font-medium">{isSearching ? "Searching…" : "Start Search"}</span>
                     </button>
 
-                    <button type="button" onClick={() => setInput('The Earth is flat')} className="px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <button
+                        type="button"
+                        onClick={() => setInput('https://www.bbc.com/news/articles/cyr70zznpjxo')}
+                        className="px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
+                    >
                         Use example
                     </button>
                 </div>
 
                 <div className="ml-auto text-sm text-slate-500 dark:text-slate-400 mt-3">
-                    Progress: 
+                    Progress:
                     <span className="inline-block bg-slate-500 text-white dark:bg-slate-700 dark:text-slate-200 font-medium px-2.5 py-0.5 rounded-full text-xs ml-2">
                         {progress}%
                     </span>
@@ -78,20 +82,20 @@ export default function SearchPanel({
 
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <div>
-                            Workers: 
+                            Workers:
                             <span className="inline-block bg-slate-500 text-white dark:bg-slate-700 dark:text-slate-200 font-medium px-2.5 py-0.5 rounded-full text-xs ml-2">
                                 4
                             </span>
                         </div>
                         <div>
-                            Queue: 
+                            Queue:
                             <span className="inline-block bg-slate-500 text-white dark:bg-slate-700 dark:text-slate-200 font-medium px-2.5 py-0.5 rounded-full text-xs ml-2">
                                 12
                             </span>
                         </div>
                     </div>
 
-                                        {/* <div className="mt-3">
+                    {/* <div className="mt-3">
             <button
               type="button"
               onClick={onCancel}
