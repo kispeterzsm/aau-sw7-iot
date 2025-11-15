@@ -51,3 +51,8 @@ next-env.d.ts
 
 # webnlp modules
 /web_nlp_module/webnlp
+/web_nlp_module/app/model_backend/*
+/web_nlp_module/app/model_server/model_server/*
+/web_nlp_module/app/backend/model_backend/*
+/web_nlp_module/app/web_server_env*
+/web_nlp_module/app/model_server_env*

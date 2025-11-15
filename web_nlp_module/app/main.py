@@ -1,8 +1,10 @@
 import os
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 from nlp import NLP_Pipeline
 from web import get_site_data, WebScraping
+
 # from fastapi.middleware.cors import CORSMiddleware
 
 # start app
