@@ -1,7 +1,7 @@
 "use client";
 
+import { JobStatus, ViewMode } from "@/types/types";
 import React from "react";
-import { JobStatus } from "./types";
 
 type Props = {
     input: string;
@@ -13,6 +13,8 @@ type Props = {
     status?: JobStatus | null;
     error?: string | null;
     jobId?: string | null;
+    viewMode: ViewMode;
+    onViewModeChange: (mode: ViewMode) => void;
 };
 
 export default function SearchPanel({
@@ -25,91 +27,204 @@ export default function SearchPanel({
     status,
     error,
     jobId,
+    viewMode,
+    onViewModeChange,
 }: Props) {
     return (
-        <div className="bg-background rounded-3xl shadow-lg p-6 border border-slate-300 dark:border-slate-700">
-            <h2 className="text-2xl font-semibold">Analyze a claim</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                Paste a sentence, paragraph or a URL. The system will search the web for earliest occurrences and display provenance.
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl shadow-2xl p-6 border border-slate-700/50 sticky top-24">
+            {/* Header with icon and description */}
+            <div className="flex items-center gap-3 mb-1">
+                <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-xl shadow-lg shadow-emerald-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                    Trace Origin
+                </h2>
+            </div>
+            
+            <p className="text-sm text-slate-400 mt-2 ml-11">
+                Analyze claims and uncover their information trail.
             </p>
 
-            <form onSubmit={onSearch} className="mt-5">
-                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-2">Input</label>
-                <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Paste a URL to analyze its information origins (e.g., https://news.site/article-123)"
-                    className="w-full min-h-[140px] p-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-background shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-500/50 text-sm resize-none"
-                />
+            <form onSubmit={onSearch} className="mt-6 space-y-5">
+                {/* Input Label with Character Count */}
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                            Information to Trace
+                        </label>
+                        <span className={`text-xs font-mono ${
+                            input.length > 500 
+                                ? 'text-amber-400' 
+                                : input.length > 300 
+                                ? 'text-emerald-400' 
+                                : 'text-slate-500'
+                        }`}>
+                            {input.length}
+                        </span>
+                    </div>
 
-                <div className="mt-4 flex items-center gap-3">
+                    {/* Enhanced Textarea with gradient border on focus */}
+                    <div className="relative group">
+                        <textarea
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Paste a claim, sentence, paragraph, or URL to trace its origins across the web..."
+                            className="w-full min-h-[140px] p-4  pr-12 rounded-[12px] border border-slate-600/50 bg-slate-800/50 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 text-sm text-slate-100 placeholder-slate-500 resize-none backdrop-blur-sm transition-all group-hover:border-slate-500/50 "
+                        />
+                        <div className="absolute top-3 right-3 text-2xl pointer-events-none opacity-50 group-hover:opacity-70 transition-opacity">
+                            🔍
+                        </div>
+                    </div>
+
+                    {/* Input Suggestion */}
+                    <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                        <span>💡</span>
+                        <span>Longer inputs provide better context for tracing</span>
+                    </div>
+                </div>
+
+                {/* Action Buttons Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                    {/* Primary Action - Trace Button */}
                     <button
                         type="submit"
-                        disabled={isSearching}
-                        className="inline-flex items-center cursor-pointer gap-1 px-4 py-3 hover:bg-emerald-700 bg-emerald-600 text-white rounded-xl shadow-md disabled:opacity-50"
+                        disabled={isSearching || !input.trim()}
+                        className="cursor-pointer col-span-2 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg disabled:cursor-not-allowed transition-all hover:shadow-emerald-500/30 hover:shadow-md "
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span className="text-sm font-medium">{isSearching ? "Searching…" : "Start Search"}</span>
+                        {isSearching ? (
+                            <>
+                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span className="text-sm font-semibold">Tracing...</span>
+                            </>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <span className="text-sm font-semibold">Trace</span>
+                            </>
+                        )}
                     </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setInput('https://www.bbc.com/news/articles/cyr70zznpjxo')}
-                        className="px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl text-sm cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
-                    >
-                        Use example
-                    </button>
-                </div>
-
-                <div className="ml-auto text-sm text-slate-500 dark:text-slate-400 mt-3">
-                    Progress:
-                    <span className="inline-block bg-slate-500 text-white dark:bg-slate-700 dark:text-slate-200 font-medium px-2.5 py-0.5 rounded-full text-xs ml-2">
-                        {progress}%
-                    </span>
-                </div>
-                {error && <div className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
-
-                <div className="mt-6 border-t border-slate-300 dark:border-slate-700 pt-4">
-                    <div className="text-sm font-medium">Job status</div>
-                    <div className="mt-2 flex items-center gap-3">
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                            <div className="h-full bg-emerald-600" style={{ width: `${progress}%` }} />
-                        </div>
-                        <div className="text-xs text-slate-400 dark:text-slate-500">{status ?? "—"}</div>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        <div>
-                            Workers:
-                            <span className="inline-block bg-slate-500 text-white dark:bg-slate-700 dark:text-slate-200 font-medium px-2.5 py-0.5 rounded-full text-xs ml-2">
-                                4
-                            </span>
-                        </div>
-                        <div>
-                            Queue:
-                            <span className="inline-block bg-slate-500 text-white dark:bg-slate-700 dark:text-slate-200 font-medium px-2.5 py-0.5 rounded-full text-xs ml-2">
-                                12
-                            </span>
+                    {/* Quick Action Dropdown - Example Buttons */}
+                    <div className="relative group">
+                        <button 
+                            type="button" 
+                            className="cursor-pointer w-full px-4 py-3 border border-slate-600/50 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-700/50 hover:border-slate-500/50 transition-all backdrop-blur-sm group-hover:border-slate-500"
+                        >
+                            ✨
+                        </button>
+                        
+                        {/* Dropdown Menu */}
+                        <div className="absolute right-0 mt-1 w-44 bg-slate-800 border border-slate-700/50 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 backdrop-blur-sm">
+                            <button 
+                                type="button" 
+                                onClick={() => setInput('The Earth is flat')} 
+                                className="cursor-pointer w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-emerald-400 transition-colors border-b border-slate-700/30 first:rounded-t-xl"
+                            >
+                                📝 Text Example
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => setInput('https://www.bbc.com/news/articles/cyr70zznpjxo')} 
+                                className="cursor-pointer w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-emerald-400 transition-colors last:rounded-b-xl"
+                            >
+                                🔗 URL Example
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    {/* <div className="mt-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={!jobId || !isSearching}
-              className="px-3 py-2 rounded-xl text-sm text-rose-600 hover:bg-rose-50 border disabled:opacity-40"
-            >
-              Cancel
-            </button>
-          </div> */}
+                {/* Error Display - Enhanced */}
+                {error && (
+                    <div className="p-4 bg-gradient-to-r from-red-900/20 to-red-900/10 border border-red-500/40 rounded-xl backdrop-blur-sm animate-pulse">
+                        <div className="flex items-start gap-3">
+                            <span className="text-red-400 text-lg mt-0.5 flex-shrink-0">⚠️</span>
+                            <div>
+                                <div className="text-sm font-semibold text-red-300 mb-0.5">Error</div>
+                                <div className="text-sm text-red-300/90">{error}</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Job Status Section - Enhanced */}
+                <div className="space-y-4 border-t border-slate-700/50 pt-5">
+                    <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                            🔄 Trace Progress
+                        </div>
+                        <div className="text-xs font-mono text-slate-400 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50">
+                            {status ?? "—"}
+                        </div>
+                    </div>
+
+                    {/* Animated Progress Bar */}
+                    <div className="space-y-2">
+                        <div className="w-full h-2.5 bg-slate-700/50 rounded-full overflow-hidden border border-slate-600/50 shadow-inner">
+                            <div 
+                                className="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 transition-all duration-300 rounded-full shadow-lg shadow-emerald-500/50 relative overflow-hidden"
+                                style={{ width: `${progress}%` }}
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-slate-400">
+                            <span>Completion</span>
+                            <span className="font-mono font-semibold text-emerald-400">{Math.round(progress)}%</span>
+                        </div>
+                    </div>
+
+                    {/* System Performance Indicators */}
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-gradient-to-br from-emerald-900/20 to-emerald-900/10 border border-emerald-500/30 rounded-lg p-3 backdrop-blur-sm">
+                            <div className="text-xs text-emerald-300/70 mb-2 font-semibold uppercase tracking-wide">Workers</div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex gap-1">
+                                    {[...Array(4)].map((_, i) => (
+                                        <div 
+                                            key={i} 
+                                            className="w-2 h-2 rounded-full bg-emerald-400"
+                                            style={{
+                                                animation: `pulse ${0.8 + i * 0.1}s ease-in-out infinite`
+                                            }}
+                                        ></div>
+                                    ))}
+                                </div>
+                                <span className="text-sm font-bold text-emerald-400">4</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-cyan-900/20 to-cyan-900/10 border border-cyan-500/30 rounded-lg p-3 backdrop-blur-sm">
+                            <div className="text-xs text-cyan-300/70 mb-2 font-semibold uppercase tracking-wide">Queue</div>
+                            <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-cyan-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M3 3a1 1 0 000 2h11a1 1 0 100-2H3zM3 7a1 1 0 000 2h5a1 1 0 000-2H3zM3 11a1 1 0 100 2h4a1 1 0 100-2H3zM13 16a1 1 0 102 0v-5.586l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 101.414 1.414L13 10.414V16z" />
+                                </svg>
+                                <span className="text-sm font-bold text-cyan-400">12</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </form>
 
-            <div className="mt-6 text-xs text-slate-400 dark:text-slate-500">
-                Tip: You can paste full paragraphs or just a single sentence. Use the example button to try quickly.
+            {/* Enhanced Tip Section */}
+            <div className="mt-6 p-4 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 rounded-xl backdrop-blur-sm">
+                <div className="flex items-start gap-3">
+                    <span className="text-violet-400 text-lg flex-shrink-0">💡</span>
+                    <div>
+                        <div className="text-xs font-semibold text-violet-300 uppercase tracking-wide mb-1">Pro Tip</div>
+                        <span className="text-xs text-violet-300/90 leading-relaxed">
+                            Specific claims work best. Longer inputs take more time but provide better contextual analysis.
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     );
