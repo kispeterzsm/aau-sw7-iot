@@ -42,7 +42,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://app:app@db:5432/linkcache
-      DOWNSTREAM_BASE_URL: http://web_nlp:8080  # Use internal service name
+      DOWNSTREAM_BASE_URL: https://retaliatory-bruna-unofficious.ngrok-free.dev:8080  # Use internal service name
       DOWNSTREAM_TIMEOUT_SEC: 30
       PORT: 8999
     ports: 
