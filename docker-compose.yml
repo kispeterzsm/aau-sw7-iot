@@ -26,14 +26,14 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    # Uncomment if you need GPU support
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+        Uncomment if you need GPU support
+        deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: 1
+                capabilities: [gpu]
 
   api:
     build: ./middleware
@@ -42,7 +42,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://app:app@db:5432/linkcache
-      DOWNSTREAM_BASE_URL: https://retaliatory-bruna-unofficious.ngrok-free.dev:8080  # Use internal service name
+      DOWNSTREAM_BASE_URL: http://localhost:8080  # Use internal service name
       DOWNSTREAM_TIMEOUT_SEC: 30
       PORT: 8999
     ports: 
