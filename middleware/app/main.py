@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
-from .schemas import WrapRequest, WrapResponse, WrapData
+from .schemas import WrapRequest, WrapResponse, WrapData,RegisterRequest
 from .settings import (
     DOWNSTREAM_LINK_URL,
     DOWNSTREAM_TEXT_URL,
@@ -20,6 +20,7 @@ from . import db
 from . import news
 
 
+# ---------- Pydantic v1/v2 Helpers ----------
 def _parse_wrap_data(obj) -> WrapData:
     """Parses raw dict into WrapData model in v1/v2."""
     if hasattr(WrapData, "parse_obj"):   # pydantic v1
@@ -34,24 +35,32 @@ def _to_dict(model) -> dict:
 # -------------------------------------------
 
 
+# ---------- URL normalization & cache helpers ----------
 def _normalize_url(u: str) -> str:
     """Normalize URL so cache keys are stable (scheme/host case, trailing slash, fragment, etc.)."""
     p = urlparse(str(u).strip())
     scheme = (p.scheme or "https").lower()
     netloc = p.netloc.lower()
+    # unify path: remove trailing slash unless root; keep query as-is (or sort if you prefer)
     path = p.path.rstrip("/") or "/"
-
+    # If you want fully stable query ordering, uncomment below:
+    # from urllib.parse import parse_qsl, urlencode
+    # query = urlencode(sorted(parse_qsl(p.query, keep_blank_values=True)))
     query = p.query
-    return urlunparse((scheme, netloc, path, "", query, "")) 
+    return urlunparse((scheme, netloc, path, "", query, ""))  # drop params & fragment
 
 
 def _cache_key(url: str, depth: Optional[int]) -> str:
     return f"{_normalize_url(url)}::d{depth}"
+# -------------------------------------------------------
 
 
 # ---------- Cache coercion & stale serve ----------
 def _coerce_cached_to_wrapdata(obj: Any) -> Optional[WrapData]:
-    
+    """
+    Accept either a WrapData-like dict or a container {"data": <WrapData-like>}.
+    Return None if it can’t be parsed/validated.
+    """
     candidate = obj
     if isinstance(obj, dict) and "data" in obj and isinstance(obj["data"], dict):
         candidate = obj["data"]
@@ -75,6 +84,7 @@ async def _try_return_stale(cache_key: str, source_url: str) -> Optional[WrapRes
                 data=dm,
             )
     return None
+# ------------------------------------------------------
 
 
 # ---------- Downstream call ----------
@@ -85,7 +95,9 @@ async def _call_downstream(
     auth_header: str,
     auth_token: str,
 ) -> Tuple[int, Any, int]:
-    
+    """
+    Returns (status_code, json_or_rawdict, elapsed_ms).
+    """
     headers = {
         "Content-Type": "application/json",
         auth_header: auth_token,
@@ -134,9 +146,17 @@ async def _handle_wrap(
     req: WrapRequest,
     downstream_url: str,
 ) -> WrapResponse:
-    
-    norm_url = _normalize_url(req.url)
-    cache_key = _cache_key(req.url, req.search_depth)
+    """
+    Common implementation shared by /search/link and /search/text:
+      1) Check cache
+      2) On miss -> call downstream
+      3) Validate/normalize
+      4) Store in DB
+      5) Return WrapResponse
+      * With URL normalization, tolerant cache parsing, and stale-while-error.
+    """
+    norm_url = _normalize_url(req.input)
+    cache_key = _cache_key(req.input, req.search_depth)
 
     # ---- 1) CACHE ----
     print(f"[cache] key={cache_key}")
@@ -158,7 +178,7 @@ async def _handle_wrap(
         print("[cache] HIT but validation failed; ignoring cache")
 
     # ---- 2) DOWNSTREAM CALL ----
-    payload = {"input": str(req.url), "search_depth": req.search_depth}
+    payload = {"input": str(req.input), "search_depth": req.search_depth}
 
     try:
         status_code, raw, elapsed_ms = await _call_downstream(
@@ -195,6 +215,7 @@ async def _handle_wrap(
     try:
         data_model = _parse_wrap_data(raw)
     except ValidationError as ve:
+        # If downstream sent unexpected shape, try stale; else fail
         stale = await _try_return_stale(cache_key, norm_url)
         if stale:
             return stale
@@ -236,6 +257,35 @@ async def wrapText(req: WrapRequest) -> WrapResponse:
 # -------------------------------------
 
 
+
+@app.post("/register")
+async def register_user(req: RegisterRequest):
+    h = hashlib.sha256(req.password.encode()).hexdigest()
+    uid = await create_user(req.email, h)
+    return {"id": uid, "email": req.email}
+
+@app.post("/login")
+async def login(email: str, password: str):
+    user = await get_user(email)
+    if not user:
+        raise HTTPException(400, "invalid login")
+    h = hashlib.sha256(password.encode()).hexdigest()
+    if h != user.password_hash:
+        raise HTTPException(400, "invalid login")
+    return {"id": user.id, "email": user.email}
+
+@app.post("/subscribe")
+async def subscribe(user_id: int, plan: str):
+    await create_subscription(user_id, plan)
+    return {"status": "ok"}
+
+@app.get("/subscriptions/{user_id}")
+async def subscriptions(user_id: int):
+    return await get_user_subscriptions(user_id)
+
+
+
+
 # ---------- Utilities ----------
 def _safe_json(response: httpx.Response):
     try:
@@ -247,4 +297,9 @@ def _safe_json(response: httpx.Response):
 
 if __name__ == "__main__":
     import uvicorn
+    # Tip: ensure lifespan is enabled so startup() runs in tests as well.
     uvicorn.run("app.main:app", host="0.0.0.0", port=PORT, reload=True)
+
+
+
+
