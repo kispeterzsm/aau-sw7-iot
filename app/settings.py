@@ -13,6 +13,10 @@ DOWNSTREAM_TIMEOUT_SEC = float(os.getenv("DOWNSTREAM_TIMEOUT_SEC", "30"))
 DOWNSTREAM_AUTH_HEADER = "x-auth-token"
 DOWNSTREAM_AUTH_TOKEN  = "zlggxclDYTWevcy4zGZeId_M2CUIMKR965fddaD1lvChhqpo9JtKdo"
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/linkcache")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://iot_zay4_user:DxrBBCLrmwYWGveqLdBRHDwYjgYjfWqM"
+    "@dpg-d4ecckidbo4c73dee37g-a.frankfurt-postgres.render.com:5432/iot_zay4"
+)
 DB_INIT_RETRY_SECONDS = int(os.getenv("DB_INIT_RETRY_SECONDS", "45"))
 PORT = int(os.getenv("PORT", "8080"))

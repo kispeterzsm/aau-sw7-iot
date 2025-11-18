@@ -1,30 +1,11 @@
 services:
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: linkcache
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-    ports: ["5432:5432"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d linkcache"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-    volumes: [pgdata:/var/lib/postgresql/data]
-
   api:
     build: .
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://app:app@db:5432/linkcache
-      DOWNSTREAM_BASE_URL: https://retaliatory-bruna-unofficious.ngrok-free.dev
-      DOWNSTREAM_TIMEOUT_SEC: 30
-      PORT: 8999
-    ports: ["8999:8999"]
+      DATABASE_URL: "postgresql+asyncpg://iot_zay4_user:DxrBBCLrmwYWGveqLdBRHDwYjgYjfWqM@dpg-d4ecckidbo4c73dee37g-a.frankfurt-postgres.render.com:5432/iot_zay4"
+      DOWNSTREAM_BASE_URL: "https://retaliatory-bruna-unofficious.ngrok-free.dev"
+      DOWNSTREAM_TIMEOUT_SEC: "30"
+      PORT: "8999"
+    ports:
+      - "8999:8999"
     restart: unless-stopped
-
-volumes:
-  pgdata:

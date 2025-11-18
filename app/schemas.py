@@ -5,8 +5,12 @@ from pydantic import BaseModel, AnyHttpUrl, HttpUrl, Field
 
 class WrapRequest(BaseModel):
     # Accept either a real URL or free text (for /text workflows)
-    url: Union[str, HttpUrl]
+    input: Union[str, HttpUrl]
     search_depth: Optional[int] = Field(2, ge=0, le=5)
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
 
 class SearchResultBase(BaseModel):
     title: str
