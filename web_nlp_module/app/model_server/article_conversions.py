@@ -39,3 +39,9 @@ def dict_to_article(input_dict : dict) -> Article:
         article.publish_date = datetime.fromisoformat(article_data["publish_date"])
     else:
         article.publish_date = None
+
+    article.is_downloaded = True
+    article.download_state = 2
+    article.is_parsed = True
+
+    return article

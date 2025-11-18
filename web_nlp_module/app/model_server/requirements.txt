@@ -11,4 +11,5 @@ lxml
 stealth-requests
 accelerate
 bitsandbytes
-lightning-app
+litserve
+transformers

@@ -1,22 +1,27 @@
 import requests
 import json
+import os
 
 import configparser
 from fastapi import FastAPI
 from pydantic import BaseModel
 from web import get_site_data, WebScraping
 from model_server.article_conversions import article_to_dict
-
-CONFIG = configparser.ConfigParser()
-CONFIG_FILE_PATH = 'backend/settings.cfg'
-CONFIG.read(CONFIG_FILE_PATH)
-print(CONFIG.get('endpoints', 'nlp_url'))
-
 # from fastapi.middleware.cors import CORSMiddleware
+
+MODEL_SERVER = os.getenv("MODEL-SERVER")
+
+if (MODEL_SERVER == None):
+
+    CONFIG = configparser.ConfigParser()
+    CONFIG_FILE_PATH = 'backend/settings.cfg'
+    CONFIG.read(CONFIG_FILE_PATH)
+    MODEL_SERVER = CONFIG.get('endpoints', 'nlp_url')
 
 # start app
 app = FastAPI(title="Local NLP Service")
-scraper = WebScraping()
+SCRAPER = WebScraping()
+
 # app.add_middleware(
 #     CORSMiddleware,
 #     allow_origins=[
@@ -40,17 +45,17 @@ def link_news(data: Input):
     """
 
     article = get_site_data(data.input)
-    url = CONFIG.get('endpoints', 'nlp_url')
+    
 
-    request_response = requests.post(url, json=article_to_dict(article))
-    print(f'{str(request_response)}\n\n\n\n\n', flush=True)
+    request_response = requests.post(MODEL_SERVER, json=article_to_dict(article))
+    decoded = request_response.content.decode("utf-8")
+    queries_response = json.loads(decoded)
     if(request_response.status_code == 200):
 
-        for query in request_response:
-            print(f'{query}\n\n\n\n\n', flush=True)
+        for query in queries_response:
 
             # Call search_bing, but only capture the first list (results_with_dates)
-            results_with_dates, _ = scraper.search_bing(
+            results_with_dates, _ = SCRAPER.search_bing(
                 query["search_term"], 
                 num_results=data.search_depth,
                 num_undated_target=0,
@@ -69,17 +74,15 @@ def link_websites(data: Input):
     # process the text
 
     article = get_site_data(data.input)
-    url = CONFIG.get('endpoints', 'nlp_url')
 
-    request_response = requests.post(url, json=article_to_dict(article))
-    print(f'{str(request_response.content)}', flush=True)
+    request_response = requests.post(MODEL_SERVER, json=article_to_dict(article))
     decoded = request_response.content.decode("utf-8")
     queries_response = json.loads(decoded)
-    print(queries_response)
+
     if(request_response.status_code == 200):
         for query in queries_response:
             # Call search_bing, but only capture the second list (websites_without_dates)
-            _, websites_without_dates = scraper.search_bing(
+            _, websites_without_dates = SCRAPER.search_bing(
                 query["search_term"], 
                 num_results=0,
                 num_undated_target=data.search_depth,

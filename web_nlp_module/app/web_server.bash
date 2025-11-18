@@ -7,7 +7,7 @@ else
     echo "Python env does not exist"
     python3 -m venv web_server_env
     source web_server_env/bin/activate
-    pip3 install -r backend/requirements.txt
+    pip3 install -r web/requirements.txt
 fi
 
 uvicorn server:app --host 0.0.0.0 --port 8080

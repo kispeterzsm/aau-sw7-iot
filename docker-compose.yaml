@@ -1,13 +1,13 @@
 version: "3.9"
 
-services:
-  backend:
+services: 
+  model-server:
     build:
-      context: .
-      dockerfile: web_nlp_module/web-nlp.Dockerfile 
-    container_name: fastapi-backend
+      context: ./web_nlp_module/app
+      dockerfile: model-server.Dockerfile 
+    container_name: model-server
     ports:
-      - "8080:8080"
+      - "8001:8001"
     environment:
       - HF_TOKEN=${HF_TOKEN}
     deploy:
@@ -19,17 +19,29 @@ services:
     networks:
       - appnet
 
+  web-server:
+    build:
+      context: ./web_nlp_module/app
+      dockerfile: web-server.Dockerfile 
+    container_name: web-server
+    depends_on:
+      - model-server
+    ports:
+      - "8080:8080"
+    environment:
+      - MODEL-SERVER=http://model-server:8001/predict
+
   frontend:
     build:
-      context: .
-      dockerfile: frontend/frontend.Dockerfile 
+      context: frontend
+      dockerfile: frontend.Dockerfile 
     container_name: nextjs-frontend
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:8080
+      - NEXT_PUBLIC_API_URL=http://web-server:8080
     depends_on:
-      - backend
+      - web-server
     networks:
       - appnet
 

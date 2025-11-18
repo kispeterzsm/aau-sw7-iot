@@ -8,12 +8,7 @@ else
     python3 -m venv model_server_env
     source model_server_env/bin/activate
     pip3 install -r model_server/requirements.txt
+    python -m spacy download en_core_web_sm
 fi
 
-if [ "$LOGS" = "True" ]; then
-    echo "Logs are enabled"
-    lightning run app app.py --open-logs
-else
-    echo "Logs are disabled"
-    lightning run app app.py
-fi
+python3 model_app.py

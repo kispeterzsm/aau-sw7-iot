@@ -1,18 +1,18 @@
 import os
-import pprint
+import logging
 
 from nlp import NLP_Pipeline
 from model_server.article_conversions import dict_to_article
 
 from newspaper import Article
 import litserve as ls
-from pydantic import BaseModel
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
-class Input(BaseModel):
-    input: str
-    search_depth: int # how many websearch results do you want  
-
+LOGGER = logging.getLogger(__name__)
 
 class NLPAPI(ls.LitAPI):
     def setup(self, device):
@@ -21,27 +21,22 @@ class NLPAPI(ls.LitAPI):
         HF_TOKEN = os.getenv("HF_TOKEN")
 
         # download models, etc.
-        print(device, flush=True)
-        print("Initializing...")
+        LOGGER.debug("Initializing...")
         self.model = NLP_Pipeline(HF_TOKEN)
 
-    def decode_request(self, request: Input):
-        pprint.pprint(request, flush=True)
+    def decode_request(self, request):
 
-        payload = request.get_json()
-        input = payload["input"]
-        pprint.pprint(input, flush=True)
+        input = request
+
         return dict_to_article(input)
 
-    def predict(self, x: Article):
-        pprint.pprint(str(x), flush=True)
-        pprint.pprint(object(x), flush=True)
-        
-        return self.do_the_thing(x)
+    def predict(self, x):
+
+        return self.model.do_the_thing(x)
 
     def encode_response(self, output):
-        pprint.pprint(output, flush=True)
-        return output[0]
+
+        return output
 
 if __name__ == "__main__":
     api = NLPAPI()
