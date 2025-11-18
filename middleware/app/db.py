@@ -133,7 +133,7 @@ async def save_response(cache_key: str, data: Dict[str, Any]) -> None:
         raise RuntimeError("DB engine not initialized; call init_db() first.")
 
     url, depth = _split_cache_key(cache_key)
-    payload = json.dumps(data)
+    payload = json.dumps(data, default=str)
     async with engine.begin() as conn:
         await conn.execute(
             text(UPSERT_BY_CACHE_KEY_SQL),

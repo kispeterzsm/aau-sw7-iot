@@ -173,10 +173,26 @@ async def _handle_wrap(
             detail={"message": "Downstream payload did not match expected schema", "errors": ve.errors()},
         )
 
+
+    try:
+        payload_for_model = raw["data"] if isinstance(raw, dict) and "data" in raw and isinstance(raw["data"], dict) else raw
+        data_model = _parse_wrap_data(payload_for_model)
+    except ValidationError as ve:
+        stale = await _try_return_stale(cache_key, norm_url)
+        if stale:
+            return stale
+        raise HTTPException(
+            status_code=502,
+            detail={"message": "Downstream payload did not match expected schema", "errors": ve.errors()},
+        )
+
     try:
         await db.save_response(cache_key, _to_dict(data_model))
-    except Exception:
-        pass
+        print("[cache] Saved fresh response", cache_key)
+    except Exception as e:
+        print("[db] save_response failed:", repr(e))
+
+    
 
     return WrapResponse(
         status="ok",
