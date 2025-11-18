@@ -26,7 +26,6 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-        Uncomment if you need GPU support
         deploy:
         resources:
           reservations:
