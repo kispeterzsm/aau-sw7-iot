@@ -134,20 +134,36 @@ class NLP_Pipeline():
             processed_sentences.append({"sentence": sentence, "search_term": self.extract_answer(output[0]['generated_text'])})
         return processed_sentences
 
-    def do_the_thing(self, input, top_x:int=5, query_variations:int=1) -> List[dict]:
+    def do_the_thing(self, input, top_x:int=5, query_variations:int=1, do_ner=False, ner_searches=["Wikipedia", "Twitter"]) -> List[dict]:
         """
         Given an input breaks it up into sentences, then ranks these based on how important these are.
         The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
         Returns a list of these phrases. If a `newspaper.Article` class is given as input `top_x` will be ignored as this method uses `article.summary`
+        If `do_ner` is true Named Entity Recognition will be run on the entire input text and the function will return two things, the second being a list of entities
+        together with their names, labels (as given by spacy) Also searchterms will be appended based on the `ner_searches` parameter.
         """
         searchterms=None
+        entities=None
+        ner_searches.append("")
         if isinstance(input, Article):
             searchterms= self.process_article(input)
         else:
             searchterms= self.process_raw_text(input, top_x)
         
+        if do_ner:
+            if isinstance(input, Article):
+                entities = self.find_entities(input.text)
+            else:
+                entities = self.find_entities(input)
+            for e in entities:
+                for s in ner_searches:
+                    searchterms.append({
+                        "sentence":e["name"],
+                        "search_term":e["name"]+" "+s.strip(),
+                    })
+
         if query_variations<=1:
-            return searchterms
+            return searchterms, entities if entities is not None else searchterms
 
         res=[]
         for query in searchterms:
@@ -156,7 +172,20 @@ class NLP_Pipeline():
             for var in variations:
                 res.append({"sentence":query["sentence"], "search_term":var})
                 
-        return res
+        return res, entities if entities is not None else entities
+
+    def find_entities(self, text: str):
+        entities = []
+        doc = self.nlp(text)
+        for ent in doc.ents:
+            if ent.label_ in {"PERSON", "ORG", "GPE", "EVENT", "WORK_OF_ART"}:
+                entities.append((ent.text, ent.label_))
+
+        unique_entities = [
+            {"name": name, "label": label}
+            for name, label in set(entities)
+        ]
+        return unique_entities
 
     def query_variations(self, query: str, num_variations: int = 5) -> List[str]:
             """
