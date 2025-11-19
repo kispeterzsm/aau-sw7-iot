@@ -1,0 +1,42 @@
+.factcheck-highlight {
+  background-color: rgba(255, 255, 0, 0.4);
+  border-bottom: 2px solid #ff9800;
+  cursor: help;
+  transition: background-color 0.2s;
+}
+
+.factcheck-highlight:hover {
+  background-color: rgba(255, 255, 0, 0.6);
+}
+
+.factcheck-tooltip {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 999999;
+  max-width: 400px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.factcheck-tooltip-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.factcheck-tooltip-url {
+  color: #1976d2;
+  text-decoration: none;
+  word-break: break-all;
+  display: block;
+  font-size: 12px;
+}
+
+.factcheck-tooltip-url:hover {
+  text-decoration: underline;
+}

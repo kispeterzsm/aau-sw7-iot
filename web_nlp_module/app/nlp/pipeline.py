@@ -51,6 +51,7 @@ class NLP_Pipeline():
         self.llm = Local_LLM()
         self.llm_prompt="""
                 You are an assistant that helps the user search the internet. You recieve a sentence as input, and you must output a Google search style string.
+                **IMPORTANT: Respond in the *same language* as the input sentence.**
                 Input:
                 President Donald Trump was back in public Tuesday to announce a new location for US Space Command headquarters
                 Output:

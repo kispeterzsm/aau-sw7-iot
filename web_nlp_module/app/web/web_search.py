@@ -4,10 +4,15 @@ import logging
 import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
-from urllib.parse import quote_plus, parse_qs, urlparse, unquote
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 from bs4 import BeautifulSoup
 from stealth_requests import StealthSession
 import json
+from deep_translator import GoogleTranslator
+from langdetect import detect, DetectorFactory, LangDetectException
+
+# Fixes langdetect inconsistency
+DetectorFactory.seed = 0
 
 class WebScraping:
     DEFAULT_NUM_RESULTS = 100
@@ -20,17 +25,49 @@ class WebScraping:
 
     def __init__(self, verbose: bool = False):
         self.log = logging.getLogger("WebScraping")
-        logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO,
-                            format="%(asctime)s [%(levelname)s] %(message)s")
+        logging.basicConfig(
+            level=logging.DEBUG if verbose else logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s"
+        )
+
+    def _translate_result(self, title: str, snippet: str) -> Tuple[str, str, Optional[str]]:
+        """
+        Translates title and snippet if they are not in English.
+        Returns: (translated_title, translated_snippet, original_lang_code)
+        """
+        if not title:
+            return title, snippet, None
+
+        try:
+            lang = detect(title)
+            
+            if lang == 'en':
+                return title, snippet, None
+
+            translator = GoogleTranslator(source='auto', target='en')
+            to_translate = [title or "", snippet or ""]
+            translations = translator.translate_batch(to_translate)
+            translated_title, translated_snippet = translations[0], translations[1]
+            if not translated_title:
+                return title, snippet, None
+            return translated_title, translated_snippet, lang
+        except LangDetectException:
+            return title, snippet, None
+        except Exception as e:
+            self.log.warning(f"Translation failed for '{title}': {e}")
+            return title, snippet, None
 
     @staticmethod
     def random_delay():
         time.sleep(random.uniform(*WebScraping.DELAY_RANGE))
 
     @staticmethod
-    def build_bing_search_url(query: str, first: int = 0) -> str:
+    def build_bing_search_url(query: str, first: int = 0, market: Optional[str] = None) -> str:
         safe_q = quote_plus(query)
-        return f"https://www.bing.com/search?q={safe_q}&first={first}"
+        url = f"https://www.bing.com/search?q={safe_q}&first={first}"
+        if market:
+            url += f"&mkt={market}"
+        return url
 
     @staticmethod
     def parse_date(text: str) -> Optional[datetime]:
@@ -194,7 +231,6 @@ class WebScraping:
         #self.log.debug(f"No date found for {url} using webpage fallback.")
         return None
 
-
     def parse_bing_results(self, html: str, search_type: str, session: StealthSession) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
         Now accepts the 'session' object to pass to the webpage fallback parser.
@@ -270,7 +306,15 @@ class WebScraping:
                 self.log.warning(f"Error parsing item structure: {e} - HTML: {item.prettify()[:200]}")
                 continue
 
-            # Final date parsin attempt
+            original_title_text = title
+            original_snippet_text = snippet
+
+            translated_title, translated_snippet, original_lang = self._translate_result(original_title_text, original_snippet_text)
+            
+            title = translated_title
+            snippet = translated_snippet
+
+            # Final date parsing attempt
             if not date and date_text:
                 parsed_dt_final = self.parse_date(date_text)
                 if parsed_dt_final:
@@ -278,7 +322,8 @@ class WebScraping:
 
             # Final fallback: Parse the snippet text
             if not date and snippet:
-                parsed_dt_snippet = self.parse_date(snippet)
+                snippet_to_parse_date = original_snippet_text if original_lang else snippet
+                parsed_dt_snippet = self.parse_date(snippet_to_parse_date)
                 if parsed_dt_snippet:
                     date = parsed_dt_snippet
             
@@ -290,42 +335,71 @@ class WebScraping:
 
             # Sort into the correct list
             if title and url and date:
-                results_with_date.append({
+                result_data = {
                     "title": title,
                     "url": url,
                     "snippet": snippet,
                     "date": date.strftime("%Y-%m-%d")
-                })
+                }
+                
+                if original_lang:
+                    result_data["title"] = f"{title} (original language source: {original_lang})"
+                    result_data["original_title"] = original_title_text 
+                    result_data["original_language"] = original_lang
+                
+                results_with_date.append(result_data)
+                
             elif title or url: # Add to the 'websites' list
-                websites.append({
+                web_data = {
                     "title": title,
                     "url": url,
                     "snippet": snippet
-                })
+                }
+                if original_lang:
+                    web_data["title"] = f"{title} (original language source: {original_lang})"
+                    web_data["original_title"] = original_title_text
+                    web_data["original_language"] = original_lang
+                    
+                websites.append(web_data)
 
         if not results_with_date and not websites and html: 
             self.log.warning(f"No results parsed from page. Container selectors '{container_selectors}' might be outdated.")
 
         return results_with_date, websites
 
-    def search_bing(self, query: str, num_results: int = DEFAULT_NUM_RESULTS, num_undated_target: int = 10, search_type: str = 'news') -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
+    def search_bing(
+        self,
+        query: str,
+        num_results: int = DEFAULT_NUM_RESULTS,
+        num_undated_target: int = 10,
+        search_type: str = 'news',
+        market: Optional[str] = None
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
-        Keeps fetching pages until 'num_results' (dated) AND 'num_undated_target' (undated) are collected.
-        Returns two lists: (results_with_dates, websites_without_dates)
+        - Detects language and sets region.
+        - User can override market.
+        - If detection fails, fallback to english (standard).
         """
         results_with_dates: List[Dict[str, str]] = []
         websites_without_dates: List[Dict[str, str]] = []
+
+        seen_urls = set()
         per_page = 10
         page = 0
+
+        final_market = market
+        if final_market is None:
+            self.log.warning(f"Language detection failed for '{query}', using default market 'en-US'.")
+            final_market = "en-US"
 
         with StealthSession() as session:
             if hasattr(session, "headers"):
                 session.headers.setdefault("User-Agent", self.USER_AGENT_FALLBACK)
 
-            # Loop until we meet both targets OR we run out of pages
             while len(results_with_dates) < num_results or len(websites_without_dates) < num_undated_target:
                 first = page * per_page + 1
-                url = self.build_bing_search_url(query, first)
+                url = self.build_bing_search_url(query, first, market=final_market)
+                self.log.info(f"Fetching {url} ...")
 
                 try:
                     resp = session.get(url, timeout=15)
@@ -338,19 +412,25 @@ class WebScraping:
                     break
 
                 html = getattr(resp, "text", "")
-                
                 page_dated_results, page_undated_websites = self.parse_bing_results(
                     html, search_type=search_type, session=session
                 )
 
-                # Check if the page returned nothing at all
                 if not page_dated_results and not page_undated_websites:
                     self.log.warning("No results found on this page. Stopping search.")
                     break
 
-                # Add new results to our main lists
-                results_with_dates.extend(page_dated_results)
-                websites_without_dates.extend(page_undated_websites)
+
+                # Add to the list only different urls, prevents duplication
+                for result in page_dated_results:
+                    if result['url'] not in seen_urls and len(results_with_dates) < num_results:
+                        results_with_dates.append(result)
+                        seen_urls.add(result['url'])
+
+                for result in page_undated_websites:
+                    if result['url'] not in seen_urls and len(websites_without_dates) < num_undated_target:
+                        websites_without_dates.append(result)
+                        seen_urls.add(result['url'])
 
                 if len(results_with_dates) >= num_results and len(websites_without_dates) >= num_undated_target:
                     self.log.info("Both dated and undated result targets met. Stopping search.")
@@ -359,7 +439,6 @@ class WebScraping:
                 self.random_delay()
                 page += 1
 
-        # Returns both lists
         return results_with_dates[:num_results], websites_without_dates[:num_undated_target]
 
     @staticmethod
