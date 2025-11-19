@@ -386,6 +386,7 @@ class WebScraping:
         seen_urls = set()
         per_page = 10
         page = 0
+        MAX_PAGES = 100
 
         final_market = market
         if final_market is None:
@@ -396,7 +397,7 @@ class WebScraping:
             if hasattr(session, "headers"):
                 session.headers.setdefault("User-Agent", self.USER_AGENT_FALLBACK)
 
-            while len(results_with_dates) < num_results or len(websites_without_dates) < num_undated_target:
+            while (len(results_with_dates) < num_results or len(websites_without_dates) < num_undated_target) and page<MAX_PAGES:
                 first = page * per_page + 1
                 url = self.build_bing_search_url(query, first, market=final_market)
                 self.log.info(f"Fetching {url} ...")
