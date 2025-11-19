@@ -15,8 +15,14 @@ COPY model_server.py /app
 
 COPY nlp /app/nlp
 
-RUN pip install --no-cache-dir -r model_server/requirements.txt
+RUN --mount=type=cache,target=/root/.cache,id=pip \
+    python -m pip install uv 
+
+RUN --mount=type=cache,target=/root/.cache,id=pip \
+    uv pip install --system -r model_server/requirements.txt
+
 RUN python -m spacy download en_core_web_sm
 
 EXPOSE 8001
+
 CMD ["python3", "model_server.py"]

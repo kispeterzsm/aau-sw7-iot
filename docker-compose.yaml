@@ -29,7 +29,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - MODEL-SERVER=http://model-server:8001/predict
+      - MODEL_SERVER=http://model-server:8001/predict
+    networks:
+      - appnet
 
   frontend:
     build:

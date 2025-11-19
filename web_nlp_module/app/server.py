@@ -9,17 +9,18 @@ from web import get_site_data, WebScraping
 from model_server.article_conversions import article_to_dict
 # from fastapi.middleware.cors import CORSMiddleware
 
-MODEL_SERVER = os.getenv("MODEL-SERVER")
+MODEL_SERVER = os.getenv("MODEL_SERVER")
+print(MODEL_SERVER)
 
 if (MODEL_SERVER == None):
-
+    print(MODEL_SERVER)
     CONFIG = configparser.ConfigParser()
     CONFIG_FILE_PATH = 'backend/settings.cfg'
     CONFIG.read(CONFIG_FILE_PATH)
     MODEL_SERVER = CONFIG.get('endpoints', 'nlp_url')
 
 # start app
-app = FastAPI(title="Local NLP Service")
+APP = FastAPI(title="Local NLP Service")
 SCRAPER = WebScraping()
 
 # app.add_middleware(
@@ -38,7 +39,7 @@ class Input(BaseModel):
     input: str
     search_depth: int # how many websearch results do you want  
 
-@app.post("/link/news")
+@APP.post("/link/news")
 def link_news(data: Input):
     """
     Fetch content, run NLP, and return ONLY news sources (dated results).
@@ -66,7 +67,7 @@ def link_news(data: Input):
     return {"result": request_response}
 
 
-@app.post("/link/websites")
+@APP.post("/link/websites")
 def link_websites(data: Input):
     """
     Fetch content, run NLP, and return ONLY website sources undated results
@@ -92,7 +93,7 @@ def link_websites(data: Input):
 
     return {"result": queries_response}
 
-@app.post("/text")
+@APP.post("/text")
 def text(data: Input):
     """
     Bypasses nlp and searches directly
