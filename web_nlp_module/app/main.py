@@ -1,8 +1,11 @@
 import os
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 from nlp import NLP_Pipeline
 from web import get_site_data, WebScraping
+
+# from fastapi.middleware.cors import CORSMiddleware
 
 # start app
 app = FastAPI(title="Local NLP Service")
@@ -14,6 +17,18 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 print("Initializing...")
 scraper = WebScraping()
 nlp_pipe = NLP_Pipeline(HF_TOKEN)
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=[
+#         "http://localhost:3000",
+#         "http://127.0.0.1:3000",
+#         "http://frontend:3000",
+#     ],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 class Input(BaseModel):
     input: str

@@ -1,0 +1,52 @@
+version: "3.9"
+
+services: 
+  model-server:
+    build:
+      context: ./web_nlp_module/app
+      dockerfile: model-server.Dockerfile 
+    container_name: model-server
+    ports:
+      - "8001:8001"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    runtime: nvidia 
+    networks:
+      - appnet
+
+  web-server:
+    build:
+      context: ./web_nlp_module/app
+      dockerfile: web-server.Dockerfile 
+    container_name: web-server
+    depends_on:
+      - model-server
+    ports:
+      - "8080:8080"
+    environment:
+      - MODEL_SERVER=http://model-server:8001/predict
+    networks:
+      - appnet
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: frontend.Dockerfile 
+    container_name: nextjs-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://web-server:8080
+    depends_on:
+      - web-server
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
