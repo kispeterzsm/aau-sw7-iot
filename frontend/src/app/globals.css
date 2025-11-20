@@ -1,5 +1,6 @@
 
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *)); 
 
 
 :root,
@@ -18,8 +19,22 @@ html[data-color-scheme="light"] {
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
+  
+  /* ALL derived variables go HERE */
+  --background: var(--color-background);
+  --background-secondary: var(--color-surface);
+  --background-tertiary: var(--color-secondary);
+  --foreground: var(--color-text);
+  --foreground-secondary: var(--color-text-secondary);
+  --foreground-tertiary: var(--color-text-secondary);
+  --border: var(--color-border);
+  --border-light: var(--color-card-border);
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-hover);
+  --primary-light: var(--color-primary-active);
 }
 
+/* ===== Dark Mode ===== */
 html.dark,
 html[data-color-scheme="dark"] {
   --color-background: #0a0a0a;
@@ -36,9 +51,8 @@ html[data-color-scheme="dark"] {
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
-}
-
-:root {
+  
+  /* ALL derived variables go HERE TOO */
   --background: var(--color-background);
   --background-secondary: var(--color-surface);
   --background-tertiary: var(--color-secondary);
@@ -47,20 +61,9 @@ html[data-color-scheme="dark"] {
   --foreground-tertiary: var(--color-text-secondary);
   --border: var(--color-border);
   --border-light: var(--color-card-border);
-  
-  /* Brand Colors - Using design system colors */
   --primary: var(--color-primary);
   --primary-dark: var(--color-primary-hover);
   --primary-light: var(--color-primary-active);
-  --secondary: var(--color-teal-400);
-  --secondary-dark: var(--color-teal-600);
-  --secondary-light: var(--color-teal-300);
-  
-  /* Accent Colors */
-  --accent-success: var(--color-success);
-  --accent-warning: var(--color-warning);
-  --accent-error: var(--color-error);
-  --accent-info: var(--color-info);
 }
 
 

@@ -314,14 +314,14 @@ export default function Page() {
     [filteredResults]
   );
 
-return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 transition-colors duration-300 antialiased">
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white text-slate-900 transition-colors duration-300 antialiased dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
       <Navbar />
 
       {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Gradient Orbs */}
-        <div className="absolute top-20 left-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-20 left-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse dark:bg-emerald-500/10"></div>
         <div className="absolute bottom-32 right-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
@@ -331,7 +331,7 @@ return (
         <div className="mb-12 text-center">
           <div className="inline-flex items-center gap-2 mb-4">
             <div className="w-1 h-1 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"></div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-semibold text-slate-600 uppercase tracking-widest dark:text-slate-400">
               Forensic Analysis Engine
             </span>
             <div className="w-1 h-1 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"></div>
@@ -339,7 +339,7 @@ return (
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-4">
             Trace Information Origins
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto dark:text-slate-400">
             Trace claims to their roots, evaluate the evidence, and make sharing decisions with confidence.
           </p>
         </div>
@@ -368,7 +368,7 @@ return (
           <div className="lg:col-span-5">
             <div className="relative">
               {/* Floating Card Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 rounded-3xl blur-xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 rounded-3xl blur-xl dark:from-cyan-500/5 dark:to-emerald-500/5"></div>
               <div className="relative">
                 <ResultsList
                   results={filteredResults}
@@ -388,7 +388,7 @@ return (
             <div className="sticky top-24">
               <div className="relative">
                 {/* Floating Card Effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 rounded-3xl blur-xl"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 rounded-3xl blur-xl dark:from-emerald-500/5 dark:to-cyan-500/5"></div>
                 <div className="relative">
                   <TimelinePanel 
                     results={filteredResults} 
@@ -406,11 +406,11 @@ return (
         {/* Empty State - When no results */}
         {!isSearching && filteredResults.length === 0 && (
           <div className="mt-16 text-center">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20 mb-4">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-200/20 mb-4 dark:border-emerald-500/20">
               <span className="text-5xl">🔍</span>
             </div>
-            <h3 className="text-2xl font-bold text-slate-300 mb-2">No Results Yet</h3>
-            <p className="text-slate-400 max-w-md mx-auto">
+            <h3 className="text-2xl font-bold text-slate-700 mb-2 dark:text-slate-300">No Results Yet</h3>
+            <p className="text-slate-600 max-w-md mx-auto dark:text-slate-400">
               Enter a claim or URL in the search panel to begin tracing its information origins across the web.
             </p>
           </div>
@@ -432,8 +432,8 @@ return (
       )}
 
       {/* Subtle Footer Divider */}
-      <footer className="relative z-10 py-10 border-t border-slate-700/30 ">
-        <div className="text-center text-xs text-slate-500">
+      <footer className="relative z-10 py-10 border-t border-slate-200/30 dark:border-slate-700/30">
+        <div className="text-center text-xs text-slate-600 dark:text-slate-400">
           <p>Information Origin Tracker • Forensic Analysis Engine</p>
         </div>
       </footer>
