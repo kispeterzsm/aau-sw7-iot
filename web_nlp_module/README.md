@@ -20,3 +20,7 @@ docker run -p 8080:8080 -e HF_TOKEN=<your_hf_token> <image_name>
 ```bash
 curl -X POST http://localhost:8080/link -H "Content-Type: application/json" -d '{"input": "https://example.com", "search_depth": 25}'
 ```
+
+### For the server commands
+
+Run them on either bash or zsh do not use sh.

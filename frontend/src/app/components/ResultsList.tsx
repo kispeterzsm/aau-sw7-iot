@@ -3,6 +3,7 @@
 import { ResultItem, ViewMode } from "@/types/types";
 import React, { useState } from "react";
 
+
 type Props = {
     results: ResultItem[];
     isSearching: boolean;

@@ -3,6 +3,7 @@
 import { ResultItem, AnalysisSection } from "@/types/types";
 import React, { useMemo } from "react";
 
+
 type Props = {
     results: ResultItem[];
     avgConfidence: number;
@@ -280,3 +281,4 @@ export default function TimelinePanel({
         </div>
     );
 }
+

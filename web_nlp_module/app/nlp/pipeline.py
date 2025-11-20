@@ -1,12 +1,17 @@
-from huggingface_hub import login
+from typing import List, Dict
+
 import torch
-from transformers import StoppingCriteria, StoppingCriteriaList, pipeline
 import spacy
-# python -m spacy download en_core_web_sm
 import nltk
 nltk.download('punkt_tab')
+
 from newspaper import Article
-from typing import List, Tuple, Dict
+from transformers import pipeline
+from huggingface_hub import login
+
+
+# python -m spacy download en_core_web_sm
+
 
 class Local_LLM():
     def __init__(self, model="google/gemma-3-4b-it", device="cuda", task="text-generation"):
@@ -33,6 +38,7 @@ class Local_LLM():
 
 class NLP_Pipeline():
     def __init__(self, hf_token:str):
+
         login(hf_token)
 
         # Load models

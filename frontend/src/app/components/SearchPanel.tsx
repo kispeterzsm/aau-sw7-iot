@@ -15,6 +15,7 @@ type Props = {
     jobId?: string | null;
     viewMode: ViewMode;
     onViewModeChange: (mode: ViewMode) => void;
+
 };
 
 export default function SearchPanel({

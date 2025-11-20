@@ -39,6 +39,7 @@ const SAMPLE_RESPONSE = {
   }
 };
 
+
 export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
@@ -192,6 +193,7 @@ export default function Page() {
   }
 
   // Main search handler
+
   async function handleSearch(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
@@ -440,3 +442,4 @@ return (
     </main>
   );
 }
+

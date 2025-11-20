@@ -26,3 +26,11 @@ To check inside a pod, you can use the following command:
 ```bash
 kubectl port-forward <pod-name> <port>:<port>
 ``` 
+
+### Secret
+
+To add a secret for the web-nlp use:
+
+```bash
+kubectl create secret generic hf-secret   --from-literal=HF_TOKEN=<your_token>
+```

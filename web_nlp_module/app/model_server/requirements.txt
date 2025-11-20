@@ -1,0 +1,15 @@
+spacy
+nltk
+newspaper3k
+lxml-html-clean
+fastapi
+pydantic
+uvicorn[standard]
+requests
+beautifulsoup4
+lxml
+stealth-requests
+accelerate
+bitsandbytes
+litserve
+transformers
