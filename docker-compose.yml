@@ -18,30 +18,35 @@ services:
       - app-network
 
   web_nlp:
-    build: ./web_nlp_module
+    build:
+      context: ./web_nlp_module
+      args:
+        HF_TOKEN: "your_hf_token"     # <<< MUST be passed at build time
+        MODEL_NAME: "google/gemma-3-4b-it"
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      HF_TOKEN: ${HF_TOKEN:-}  # Use env variable or empty
+      HF_TOKEN: "your_hf_token"
+      AUTH_TOKEN_NGROK: "x-auth-token" # << Use the x-auth-token
     ports: 
       - "8080:8080"
     restart: unless-stopped
     networks:
       - app-network
-        deploy:
-        resources:
-          reservations:
-            devices:
-              - driver: nvidia
-                count: 1
-                capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   api:
     build: ./middleware
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://app:app@db:5432/linkcache
-      DOWNSTREAM_BASE_URL: http://localhost:8080  # Use internal service name
+      DATABASE_URL: # << Maybe don't expose the url with usernam and password...
+      DOWNSTREAM_BASE_URL: http://web_nlp:8080  # <<Use internal service name
       DOWNSTREAM_TIMEOUT_SEC: 30
       PORT: 8999
     ports: 
@@ -62,7 +67,7 @@ services:
       api:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8999 
+      NEXT_PUBLIC_API_URL: /api
     ports: 
       - "3000:3000"
     restart: unless-stopped
