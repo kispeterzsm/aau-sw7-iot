@@ -15,14 +15,15 @@ COPY model_server.py /app
 
 COPY nlp /app/nlp
 
+# try this to have the docker to build it faster
 RUN --mount=type=cache,target=/root/.cache,id=pip \
     python -m pip install uv 
 
 RUN --mount=type=cache,target=/root/.cache,id=pip \
     uv pip install --system -r model_server/requirements.txt
-
+# normal pip install
+# RUN pip install --no-cache-dir --user -r model_server/requirements.txt
 RUN python -m spacy download en_core_web_sm
 
 EXPOSE 8001
-
 CMD ["python3", "model_server.py"]

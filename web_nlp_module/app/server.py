@@ -45,10 +45,9 @@ def link_news(data: Input):
     Fetch content, run NLP, and return ONLY news sources (dated results).
     """
 
-    article = get_site_data(data.input)
+    article_thats_not_an_article_anymore = get_site_data(data.input)
     
-
-    request_response = requests.post(MODEL_SERVER, json=article_to_dict(article))
+    request_response = requests.post(MODEL_SERVER, json=article_to_dict(article_thats_not_an_article_anymore[0]))
     decoded = request_response.content.decode("utf-8")
     queries_response = json.loads(decoded)
     if(request_response.status_code == 200):
@@ -74,9 +73,9 @@ def link_websites(data: Input):
     """
     # process the text
 
-    article = get_site_data(data.input)
+    article_thats_not_an_article_anymore = get_site_data(data.input)
 
-    request_response = requests.post(MODEL_SERVER, json=article_to_dict(article))
+    request_response = requests.post(MODEL_SERVER, json=article_to_dict(article_thats_not_an_article_anymore[0]))
     decoded = request_response.content.decode("utf-8")
     queries_response = json.loads(decoded)
 

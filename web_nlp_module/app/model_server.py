@@ -2,8 +2,10 @@ import litserve as ls
 from model_server.model_server import NLPAPI
 
 def build_server():
-    server = ls.LitServer(NLPAPI())
-    return server
+    print("Loading NLP (this will take an eternity)")
+    api = NLPAPI()
+    print("Model loaded.")
+    return ls.LitServer(api)
 
 if __name__ == "__main__":
     server = build_server()

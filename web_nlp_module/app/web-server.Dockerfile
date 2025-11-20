@@ -4,12 +4,15 @@ COPY ./web /web
 COPY server.py .
 COPY settings.cfg .
 
+# try this to have the docker to build it faster
 RUN --mount=type=cache,target=/root/.cache,id=pip \
     python -m pip install uv 
 
 RUN --mount=type=cache,target=/root/.cache,id=pip \
     uv pip install --system -r web/requirements.txt
 
+# normal pip install
+# RUN pip install --no-cache-dir --user -r web/requirements.txt
 COPY model_server /model_server
 
 EXPOSE 8080

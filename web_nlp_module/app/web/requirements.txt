@@ -12,3 +12,5 @@ stealth-requests
 accelerate
 bitsandbytes
 configparser
+langdetect
+deep_translator

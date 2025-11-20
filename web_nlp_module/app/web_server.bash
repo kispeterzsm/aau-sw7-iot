@@ -10,4 +10,4 @@ else
     pip3 install -r web/requirements.txt
 fi
 
-uvicorn server:app --host 0.0.0.0 --port 8080
+uvicorn server:APP --host 0.0.0.0 --port 8080
