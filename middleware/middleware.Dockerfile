@@ -1,24 +1,16 @@
-FROM python:3.11-slim as builder
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8999
 
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8999
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY --from=builder /root/.local /root/.local
 COPY app ./app
-
-
-ENV PATH=/root/.local/bin:$PATH
 EXPOSE 8999
 
 

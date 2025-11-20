@@ -8,6 +8,7 @@ services:
       - "8001:8001"
     environment:
       - HF_TOKEN=${HF_TOKEN}
+      - AUTH_TOKEN_NGROK:="x-auth-token" # << Use the x-auth-token
     deploy:
       resources:
         reservations:
@@ -39,7 +40,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://web-server:8080
+      - NEXT_PUBLIC_API_URL=/api
     depends_on:
       - web-server
     networks:

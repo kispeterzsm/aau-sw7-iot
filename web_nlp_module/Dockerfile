@@ -1,29 +1,20 @@
-ARG PYTHON_VERSION=3.12
+# Base image with GPU support
 FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
 
+# Setup Python
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
-    python3-pip \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y python3-pip && rm -rf /var/lib/apt/lists/*
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 WORKDIR /app
-COPY model_server /app/model_server
-COPY settings.cfg /app
-COPY model_server.py /app
 
+# Copy application files
+COPY app/ /app/
+COPY requirements.txt .
 
-COPY nlp /app/nlp
-
-# try this to have the docker to build it faster
-RUN --mount=type=cache,target=/root/.cache,id=pip \
-    python -m pip install uv 
-
-RUN --mount=type=cache,target=/root/.cache,id=pip \
-    uv pip install --system -r model_server/requirements.txt
-# normal pip install
-# RUN pip install --no-cache-dir --user -r model_server/requirements.txt
-
+# Upgrade pip and install dependencies
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
 RUN python -m spacy download en_core_web_sm
 
 # Set environment variable for model name
@@ -51,5 +42,8 @@ AutoModelForCausalLM.from_pretrained(model_name, use_auth_token=hf_token)
 print("Model files preloaded successfully.")
 EOF
 
-EXPOSE 8001
-CMD ["python3", "model_server.py"]
+# Expose FastAPI port
+EXPOSE 8080
+
+# Run FastAPI using the recommended JSON format
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

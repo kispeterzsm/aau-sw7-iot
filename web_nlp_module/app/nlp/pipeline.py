@@ -158,9 +158,9 @@ class NLP_Pipeline():
         res=[]
         for query in searchterms:
             res.append(query)
-            variations=self.query_variations(query["searchterm"], query_variations)
+            variations=self.query_variations(query["search_term"], query_variations)
             for var in variations:
-                res.append({"sentence":query["sentence"], "searchterm":var})
+                res.append({"sentence":query["sentence"], "search_term":var})
                 
         return res
 
