@@ -30,8 +30,8 @@ export default function ModeToggle() {
 
   const applyTheme = (dark: boolean) => {
     document.documentElement.classList.toggle("dark", dark);
-    // If you use DaisyUI or data-theme logic:
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    document.documentElement.setAttribute("data-color-scheme", dark ? "dark" : "light");
   };
 
   const toggle = () => {
@@ -40,7 +40,7 @@ export default function ModeToggle() {
     setIsDark(next);
     try {
       localStorage.setItem("theme", next ? "dark" : "light");
-    } catch {}
+    } catch { }
     applyTheme(next);
   };
 
@@ -58,12 +58,12 @@ export default function ModeToggle() {
         aria-pressed={isDark}
         aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
         className={`cursor-pointer relative inline-flex h-7 w-14 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${isDark
-            ? "bg-gradient-to-r from-slate-700 to-slate-600 shadow-lg shadow-emerald-500/20"
-            : "bg-gradient-to-r from-amber-200 to-yellow-200 shadow-lg shadow-yellow-400/30"
+          ? "bg-gradient-to-r from-slate-700 to-slate-600 shadow-lg shadow-emerald-500/20"
+          : "bg-gradient-to-r from-amber-200 to-yellow-200 shadow-lg shadow-yellow-400/30"
           }`}
       >
         <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-300 shadow-md flex items-center justify-center text-xs font-bold ${isDark ? "translate-x-7" : "translate-x-1"
+          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-all duration-300 shadow-md  items-center justify-center text-xs font-bold ${isDark ? "translate-x-7" : "translate-x-1"
             }`}
         >
           {isDark ? "🌙" : "☀️"}
