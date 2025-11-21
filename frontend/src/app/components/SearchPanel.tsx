@@ -32,7 +32,6 @@ export default function SearchPanel({
 }: Props) {
     return (
         <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-2xl p-6 border border-slate-200/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 dark:border-slate-700/50 sticky top-24">
-            {/* Header with icon and description */}
             <div className="flex items-center gap-3 mb-1">
                 <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-xl shadow-lg shadow-emerald-500/30">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -43,30 +42,28 @@ export default function SearchPanel({
                     Trace Origin
                 </h2>
             </div>
-            
+
             <p className="text-sm text-slate-600 mt-2 ml-11 dark:text-slate-400">
                 Analyze claims and uncover their information trail.
             </p>
 
             <form onSubmit={onSearch} className="mt-6 space-y-5">
-                {/* Input Label with Character Count */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide dark:text-slate-300">
                             Information to Trace
                         </label>
-                        <span className={`text-xs font-mono ${
-                            input.length > 500 
-                                ? 'text-amber-400' 
-                                : input.length > 300 
-                                ? 'text-emerald-400' 
-                                : 'text-slate-500'
-                        }`}>
+                        <span className={`text-xs font-mono ${input.length > 500
+                                ? 'text-amber-400'
+                                : input.length > 300
+                                    ? 'text-emerald-400'
+                                    : 'text-slate-500'
+                            }`}>
                             {input.length}
                         </span>
                     </div>
 
-                    {/* Enhanced Textarea with gradient border on focus */}
+
                     <div className="relative group">
                         <textarea
                             value={input}
@@ -79,16 +76,15 @@ export default function SearchPanel({
                         </div>
                     </div>
 
-                    {/* Input Suggestion */}
+
                     <div className="text-xs text-slate-500 flex items-center gap-1.5">
                         <span>💡</span>
                         <span>Longer inputs provide better context for tracing</span>
                     </div>
                 </div>
 
-                {/* Action Buttons Grid */}
                 <div className="grid grid-cols-3 gap-3">
-                    {/* Primary Action - Trace Button */}
+
                     <button
                         type="submit"
                         disabled={isSearching || !input.trim()}
@@ -112,27 +108,27 @@ export default function SearchPanel({
                         )}
                     </button>
 
-                    {/* Quick Action Dropdown - Example Buttons */}
+
                     <div className="relative group">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             className="cursor-pointer w-full px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-all backdrop-blur-sm group-hover:border-slate-300"
                         >
                             ✨
                         </button>
-                        
+
                         {/* Dropdown Menu */}
                         <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 backdrop-blur-sm dark:bg-slate-800 dark:border-slate-700">
-                            <button 
-                                type="button" 
-                                onClick={() => setInput('The Earth is flat')} 
+                            <button
+                                type="button"
+                                onClick={() => setInput('The Earth is flat')}
                                 className="cursor-pointer w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 hover:text-emerald-400 transition-colors border-b border-slate-200 first:rounded-t-xl dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 📝 Text Example
                             </button>
-                            <button 
-                                type="button" 
-                                onClick={() => setInput('https://www.bbc.com/news/articles/cyr70zznpjxo')} 
+                            <button
+                                type="button"
+                                onClick={() => setInput('https://www.bbc.com/news/articles/cyr70zznpjxo')}
                                 className="cursor-pointer w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 hover:text-emerald-400 transition-colors last:rounded-b-xl dark:text-slate-300 dark:hover:bg-slate-700"
                             >
                                 🔗 URL Example
@@ -141,7 +137,7 @@ export default function SearchPanel({
                     </div>
                 </div>
 
-                {/* Error Display - Enhanced */}
+
                 {error && (
                     <div className="p-4 bg-gradient-to-r from-red-100 to-red-50 border border-red-200 rounded-xl backdrop-blur-sm animate-pulse dark:from-red-900/20 dark:to-red-900/10 dark:border-red-500/40">
                         <div className="flex items-start gap-3">
@@ -154,7 +150,7 @@ export default function SearchPanel({
                     </div>
                 )}
 
-                {/* Job Status Section - Enhanced */}
+
                 <div className="space-y-4 border-t border-slate-200/50 pt-5 dark:border-slate-700/50">
                     <div className="flex items-center justify-between">
                         <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide dark:text-slate-300">
@@ -165,10 +161,10 @@ export default function SearchPanel({
                         </div>
                     </div>
 
-                    {/* Animated Progress Bar */}
+
                     <div className="space-y-2">
                         <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden border border-slate-200/50 shadow-inner dark:bg-slate-700">
-                            <div 
+                            <div
                                 className="h-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 transition-all duration-300 rounded-full shadow-lg shadow-emerald-500/50 relative overflow-hidden"
                                 style={{ width: `${progress}%` }}
                             >
@@ -181,15 +177,15 @@ export default function SearchPanel({
                         </div>
                     </div>
 
-                    {/* System Performance Indicators */}
+
                     <div className="grid grid-cols-2 gap-3 mt-4">
                         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/30 rounded-lg p-3 backdrop-blur-sm dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-500/30">
                             <div className="text-xs text-emerald-700/70 mb-2 font-semibold uppercase tracking-wide">Workers</div>
                             <div className="flex items-center gap-2">
                                 <div className="flex gap-1">
                                     {[...Array(4)].map((_, i) => (
-                                        <div 
-                                            key={i} 
+                                        <div
+                                            key={i}
                                             className="w-2 h-2 rounded-full bg-emerald-400"
                                             style={{
                                                 animation: `pulse ${0.8 + i * 0.1}s ease-in-out infinite`
@@ -214,7 +210,7 @@ export default function SearchPanel({
                 </div>
             </form>
 
-            {/* Enhanced Tip Section */}
+
             <div className="mt-6 p-4 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/30 rounded-xl backdrop-blur-sm dark:from-violet-500/10 dark:to-purple-500/10 dark:border-violet-500/30">
                 <div className="flex items-start gap-3">
                     <span className="text-violet-600 text-lg flex-shrink-0">💡</span>

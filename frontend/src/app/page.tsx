@@ -64,7 +64,7 @@ export default function Page() {
   // API 1: Get Top News
   async function loadTopNews(limit: number = 10) {
     try {
-      const response = await fetch(`http://127.0.0.1:8999/news/top?limit=${limit}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/news/top?limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch top news');
       
       const data = await response.json();
@@ -90,7 +90,7 @@ export default function Page() {
   // Analyze URL
   async function analyzeURL(url: string, searchDepth: number = 2): Promise<AnalysisSection[]> {
     try {
-      const response = await fetch('http://127.0.0.1:8999/search/link', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/search/link`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ url, search_depth: searchDepth }),
@@ -109,7 +109,7 @@ export default function Page() {
   // Analyze Text  
   async function analyzeText(text: string, searchDepth: number = 2): Promise<AnalysisSection[]> {
     try {
-      const response = await fetch('http://127.0.0.1:8999/search/text', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/search/text`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ input: text, search_depth: searchDepth }),

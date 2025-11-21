@@ -2,6 +2,8 @@
 
 import { ResultItem, ViewMode } from "@/types/types";
 import React, { useState } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 type Props = {
     results: ResultItem[];
@@ -14,6 +16,7 @@ type Props = {
 };
 
 const ITEMS_PER_PAGE = 5;
+const UNAUTHENTICATED_LIMIT = 10;
 
 export default function ResultsList({
     results,
@@ -25,19 +28,22 @@ export default function ResultsList({
     selectedSentence
 }: Props) {
     const [currentPage, setCurrentPage] = useState(1);
+    const { data: session, status } = useSession();
+    const isAuthenticated = !!session;
 
-    // Calculate pagination
-    const totalPages = Math.ceil(results.length / ITEMS_PER_PAGE);
+    const displayResults = isAuthenticated ? results : results.slice(0, UNAUTHENTICATED_LIMIT);
+
+    const totalPages = Math.ceil(displayResults.length / ITEMS_PER_PAGE);
     const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIdx = startIdx + ITEMS_PER_PAGE;
-    const currentResults = results.slice(startIdx, endIdx);
+    const currentResults = isAuthenticated
+        ? displayResults.slice(startIdx, endIdx)
+        : displayResults;
 
-    // Reset to page 1 when results change
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [results.length]);
+    }, [results.length, isAuthenticated]);
 
-    // Calculate ordinal position
     const getSourceRank = (index: number) => {
         const suffixes = ['st', 'nd', 'rd'];
         const v = index % 100;
@@ -68,15 +74,40 @@ export default function ResultsList({
                 {/* Counter Badge */}
                 <div className="flex flex-col items-end">
                     <div className="px-3 py-1.5 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 dark:from-emerald-100/50 dark:to-cyan-100/50 border border-emerald-500/30 dark:border-emerald-300/30 rounded-full text-sm font-bold text-emerald-600 dark:text-emerald-300">
-                        {results.length}
+                        {displayResults.length}
+                        {!isAuthenticated && results.length > UNAUTHENTICATED_LIMIT && '+'}
                     </div>
                     <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                        {results.length === 1 ? 'source' : 'sources'}
+                        {displayResults.length === 1 ? 'source' : 'sources'}
+                        {!isAuthenticated && results.length > UNAUTHENTICATED_LIMIT && ' shown'}
                     </span>
                 </div>
             </div>
 
-            {/* View Mode Filter - MOVED HERE */}
+            {!isAuthenticated && results.length > UNAUTHENTICATED_LIMIT && (
+                <div className="mb-5 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-100/30 dark:to-orange-100/30 border border-amber-200/30 dark:border-amber-400/50 rounded-xl backdrop-blur-sm">
+                    <div className="flex items-start gap-3">
+                        <span className="text-amber-600 dark:text-amber-400 text-lg mt-0.5">🔒</span>
+                        <div className="flex-1">
+                            <div className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wide mb-1">
+                                Limited Preview
+                            </div>
+                            <div className="text-sm text-amber-800 dark:text-amber-100 mb-3">
+                                You're viewing {UNAUTHENTICATED_LIMIT} of {results.length} sources. Sign up to unlock full access to all sources and advanced features.
+                            </div>
+                            <Link
+                                href="/register"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold rounded-lg transition-all shadow-lg hover:shadow-amber-500/25 dark:shadow-amber-600/25"
+                            >
+                                <span>✨</span>
+                                Sign Up to Unlock More
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Mode Filter */}
             <div className="mb-5 space-y-2 border-b border-slate-200/50 dark:border-slate-700/50 pb-5">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
                     Filter Results By
@@ -87,8 +118,8 @@ export default function ResultsList({
                             key={mode}
                             onClick={() => onViewModeChange(mode)}
                             className={`flex-1 cursor-pointer px-3 py-2 text-xs font-semibold rounded-md transition-all ${viewMode === mode
-                                    ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-600 dark:to-cyan-600 text-white shadow-lg shadow-emerald-500/30 dark:shadow-emerald-600/30'
-                                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/30 dark:hover:bg-slate-800/30'
+                                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-600 dark:to-cyan-600 text-white shadow-lg shadow-emerald-500/30 dark:shadow-emerald-600/30'
+                                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/30 dark:hover:bg-slate-800/30'
                                 }`}
                         >
                             {mode === 'all' ? '📋 All' : mode === 'news' ? '📰 News' : '🌐 Web'}
@@ -97,7 +128,7 @@ export default function ResultsList({
                 </div>
             </div>
 
-            {/* Selected Sentence Banner */}
+
             {selectedSentence && (
                 <div className="mb-5 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-100/30 dark:to-cyan-100/30 border border-blue-200/30 dark:border-blue-400/50 rounded-xl backdrop-blur-sm">
                     <div className="flex items-start gap-3">
@@ -114,9 +145,8 @@ export default function ResultsList({
                 </div>
             )}
 
-            {/* Results Container with Custom Scrollbar */}
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-emerald-600 scrollbar-track-slate-200/30 dark:scrollbar-thumb-emerald-300 dark:scrollbar-track-slate-700/30">
-                {results.length === 0 && !isSearching && (
+            <div className="space-y-4 max-h-[90vh] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-emerald-600 scrollbar-track-slate-200/30 dark:scrollbar-thumb-emerald-300 dark:scrollbar-track-slate-700/30">
+                {displayResults.length === 0 && !isSearching && (
                     <div className="rounded-xl border border-dashed border-slate-200/30 dark:border-slate-700/30 p-12 text-center">
                         <div className="text-4xl mb-3">🔎</div>
                         <p className="text-sm text-slate-700 dark:text-slate-300">
@@ -130,19 +160,18 @@ export default function ResultsList({
 
                 {/* Result Items */}
                 {currentResults.map((r, index) => {
-                    const globalIndex = startIdx + index;
+                    const globalIndex = isAuthenticated ? startIdx + index : index;
                     return (
                         <article
                             key={r.id}
                             className="group relative bg-slate-50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/50 rounded-xl p-4 shadow-sm hover:shadow-lg hover:border-slate-300/50 dark:hover:border-slate-600/50 transition-all duration-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 backdrop-blur-sm"
                         >
-                            {/* Rank Badge */}
                             <div className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 dark:from-emerald-200/50 dark:to-cyan-200/50 border border-emerald-500/30 dark:border-emerald-400/50 rounded-full text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
                                 #{getSourceRank(globalIndex + 1)}
                             </div>
 
                             <div className="flex items-start gap-2">
-                                {/* Favicon */}
+
                                 <div className="flex-shrink-0 mt-1">
                                     <img
                                         src={`https://www.google.com/s2/favicons?domain=${r.domain}`}
@@ -166,14 +195,6 @@ export default function ResultsList({
                                         >
                                             {r.title}
                                         </a>
-
-                                        {/* Confidence Badge */}
-                                        {/* <div className="flex-shrink-0 text-right">
-                                            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 dark:from-emerald-100/50 dark:to-cyan-100/50 border border-emerald-400/30 dark:border-emerald-400/50 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full text-xs font-bold">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 dark:bg-emerald-600 animate-pulse"></div>
-                                                {(r.confidence * 100).toFixed(0)}%
-                                            </div>
-                                        </div> */}
                                     </div>
 
                                     {/* Meta Info */}
@@ -193,8 +214,8 @@ export default function ResultsList({
                                             <>
                                                 <span className="text-slate-400 dark:text-slate-500">•</span>
                                                 <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.type === 'news'
-                                                        ? 'bg-blue-100/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200/30 dark:border-blue-500/30'
-                                                        : 'bg-green-100/50 dark:bg-green-500/20 text-green-700 dark:text-green-300 border border-green-200/30 dark:border-green-500/30'
+                                                    ? 'bg-blue-100/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200/30 dark:border-blue-500/30'
+                                                    : 'bg-green-100/50 dark:bg-green-500/20 text-green-700 dark:text-green-300 border border-green-200/30 dark:border-green-500/30'
                                                     }`}>
                                                     {r.type === 'news' ? '📰 News' : '🌐 Website'}
                                                 </span>
@@ -258,15 +279,15 @@ export default function ResultsList({
                 )}
             </div>
 
-            {/* Pagination Controls */}
-            {results.length > ITEMS_PER_PAGE && (
+
+            {isAuthenticated && displayResults.length > ITEMS_PER_PAGE ? (
                 <div className="mt-6 pt-5 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between">
                     <div className="text-xs text-slate-700 dark:text-slate-300">
-                        Showing <span className="font-semibold text-slate-800 dark:text-slate-100">{startIdx + 1}</span> to <span className="font-semibold text-slate-800 dark:text-slate-100">{Math.min(endIdx, results.length)}</span> of <span className="font-semibold text-slate-800 dark:text-slate-100">{results.length}</span> results
+                        Showing <span className="font-semibold text-slate-800 dark:text-slate-100">{startIdx + 1}</span> to <span className="font-semibold text-slate-800 dark:text-slate-100">{Math.min(endIdx, displayResults.length)}</span> of <span className="font-semibold text-slate-800 dark:text-slate-100">{displayResults.length}</span> results
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* Previous Button */}
+
                         <button
                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
@@ -275,7 +296,7 @@ export default function ResultsList({
                             ← Prev
                         </button>
 
-                        {/* Page Numbers */}
+
                         <div className="flex items-center gap-1">
                             {Array.from({ length: totalPages }, (_, i) => {
                                 const page = i + 1;
@@ -290,8 +311,8 @@ export default function ResultsList({
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
                                         className={`w-8 h-8 cursor-pointer rounded-lg text-xs font-semibold transition-all ${isActive
-                                                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-600 dark:to-cyan-600 text-white shadow-lg'
-                                                : 'border border-slate-200/50 dark:border-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
+                                            ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-600 dark:to-cyan-600 text-white shadow-lg'
+                                            : 'border border-slate-200/50 dark:border-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
                                             }`}
                                     >
                                         {page}
@@ -310,7 +331,30 @@ export default function ResultsList({
                         </button>
                     </div>
                 </div>
-            )}
+            ) : <div className="mt-6 pt-5 border-t border-slate-200/50 dark:border-slate-700/50 text-center">
+                <div className="mb-3">
+                    <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
+                        🔍 Want to see all sources and advanced features?
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                        Unlock complete access to our Forensic Analysis Engine
+                    </p>
+                </div>
+                <Link
+                    href="/register"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white text-sm font-semibold rounded-xl transition-all shadow-lg hover:shadow-emerald-500/25 dark:shadow-emerald-600/25"
+                >
+                    <span>🚀</span>
+                    Sign Up to Unlock Full Access
+                </Link>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                    Already have an account?{' '}
+                    <Link href="/login" className="text-emerald-600 dark:text-emerald-400 hover:underline">
+                        Sign in
+                    </Link>
+                </p>
+            </div>}
+
         </div>
     );
 }
