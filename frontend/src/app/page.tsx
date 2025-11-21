@@ -62,7 +62,7 @@ export default function Page() {
   }, []);
 
   // API 1: Get Top News
-  async function loadTopNews(limit: number = 10) {
+  async function loadTopNews(limit: number = 15) {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/news/top?limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch top news');

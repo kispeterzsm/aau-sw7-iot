@@ -84,29 +84,6 @@ export default function ResultsList({
                 </div>
             </div>
 
-            {!isAuthenticated && results.length > UNAUTHENTICATED_LIMIT && (
-                <div className="mb-5 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-100/30 dark:to-orange-100/30 border border-amber-200/30 dark:border-amber-400/50 rounded-xl backdrop-blur-sm">
-                    <div className="flex items-start gap-3">
-                        <span className="text-amber-600 dark:text-amber-400 text-lg mt-0.5">🔒</span>
-                        <div className="flex-1">
-                            <div className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wide mb-1">
-                                Limited Preview
-                            </div>
-                            <div className="text-sm text-amber-800 dark:text-amber-100 mb-3">
-                                You're viewing {UNAUTHENTICATED_LIMIT} of {results.length} sources. Sign up to unlock full access to all sources and advanced features.
-                            </div>
-                            <Link
-                                href="/register"
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold rounded-lg transition-all shadow-lg hover:shadow-amber-500/25 dark:shadow-amber-600/25"
-                            >
-                                <span>✨</span>
-                                Sign Up to Unlock More
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* View Mode Filter */}
             <div className="mb-5 space-y-2 border-b border-slate-200/50 dark:border-slate-700/50 pb-5">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
@@ -342,7 +319,7 @@ export default function ResultsList({
                 </div>
                 <Link
                     href="/register"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white text-sm font-semibold rounded-xl transition-all shadow-lg hover:shadow-emerald-500/25 dark:shadow-emerald-600/25"
+                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold rounded-lg transition-all shadow-lg hover:shadow-amber-500/25 dark:shadow-amber-600/25"
                 >
                     <span>🚀</span>
                     Sign Up to Unlock Full Access
