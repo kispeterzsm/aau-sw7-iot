@@ -1,0 +1,31 @@
+# Base Image with GPU support
+FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y python3-pip git && \
+    rm -rf /var/lib/apt/lists/*
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+WORKDIR /app
+
+RUN pip install --upgrade pip
+RUN pip install torch torchvision torchaudio transformers accelerate huggingface_hub
+
+# Bake llm into image
+ARG HF_TOKEN
+ENV HF_TOKEN=$HF_TOKEN
+ENV MODEL_NAME="google/gemma-3-4b-it"
+
+RUN python - <<EOF
+import os
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+model_name = os.environ["MODEL_NAME"]
+hf_token = os.environ.get("HF_TOKEN")
+
+print(f"Downloading model {model_name} to cache...")
+# Download model and tokenizer
+AutoTokenizer.from_pretrained(model_name, token=hf_token)
+AutoModelForCausalLM.from_pretrained(model_name, token=hf_token)
+print("Model files preloaded successfully.")
+EOF

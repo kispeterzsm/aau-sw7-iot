@@ -5,6 +5,20 @@ The NLP module is responsible for creating a list of search queries.
 - `Input:` A piece of text, for example a new article.
 - `Output:` A list of web search style strings.
 
+## Setup (Docker)
+
+**Crucial:** You must build the base image **first** to download and cache the heavy model (4GB+).
+
+# Build Base Image (Downloads Model)
+# Replace 'your_token' with your actual HuggingFace token
+```bash
+docker build -f Dockerfile.base --build-arg HF_TOKEN="your_token" -t local/llm-base:v1 .
+```
+# 2. Run Service
+```bash
+docker-compose up --build
+```
+
 ## Usage
 
 Create a HuggingFace token which allows you to access Gemma models. Afterwards, run this code when the program starts up. This will take a few minutes to load. __Cuda compatible GPU required!!!__
