@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+requests
+torch
+transformers
+accelerate
+bitsandbytes
+huggingface-hub
+spacy
+nltk
+newspaper3k
+lxml
+lxml_html_clean
+langdetect
+stealth-requests
