@@ -1,4 +1,5 @@
 services:
+  # --- 1. Database ---
   db:
     image: postgres:16
     environment:
@@ -17,23 +18,20 @@ services:
     networks:
       - app-network
 
-  web_nlp:
+  # --- 2. NLP Service (GPU) ---
+  nlp-service:
     build:
-      context: ./web_nlp_module
+      context: ./nlp_module
+      dockerfile: Dockerfile
       args:
-        HF_TOKEN: "your_hf_token"     # <<< MUST be passed at build time
-        MODEL_NAME: "google/gemma-3-4b-it"
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      HF_TOKEN: "your_hf_token"
-      AUTH_TOKEN_NGROK: "x-auth-token" # << Use the x-auth-token
+        HF_TOKEN: ${HF_TOKEN}
+    container_name: nlp-service
     ports: 
       - "8080:8080"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+      - MODEL_NAME=google/gemma-3-4b-it
     restart: unless-stopped
-    networks:
-      - app-network
     deploy:
       resources:
         reservations:
@@ -41,17 +39,51 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    networks:
+      - app-network
 
+  # --- 3. Web Search Service (CPU) ---
+  web-search:
+    build:
+      context: ./web_search
+      dockerfile: Dockerfile
+    container_name: web-search
+    ports: 
+      - "8000:8000"
+    environment:
+      - NLP_SERVICE_URL=http://nlp-service:8080 
+      - AUTH_TOKEN_NGROK=${AUTH_TOKEN_NGROK}
+    depends_on:
+      - nlp-service
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # --- 4. Middleware API (Java Spring Boot) ---
   api:
     build: ./middleware
+    container_name: middleware-api
     environment:
-      DATABASE_URL: # << Maybe don't expose the url with usernam and password...
-      DOWNSTREAM_BASE_URL: http://web_nlp:8080  # <<Use internal service name
-      DOWNSTREAM_TIMEOUT_SEC: 30
-      PORT: 8999
+      # Server Config
+      - SERVER_PORT=8999
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/linkcache
+      - SPRING_DATASOURCE_USERNAME=app
+      - SPRING_DATASOURCE_PASSWORD=app
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - DOWNSTREAM_BASE_URL=http://web-search:8000
+      - DOWNSTREAM_LINK_PATH=/link/all
+      - DOWNSTREAM_TEXT_PATH=/text/all
+      - DOWNSTREAM_TIMEOUT_SEC=60
+
     ports: 
       - "8999:8999"
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      web-search:
+        condition: service_started
     networks:
       - app-network
     healthcheck:
@@ -59,15 +91,17 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 10s
+      start_period: 20s
 
+  # --- 5. Frontend ---
   frontend:
     build: ./frontend
+    container_name: frontend-app
     depends_on:
       api:
         condition: service_healthy
     environment:
-      NEXT_PUBLIC_API_URL: /api
+      - NEXT_PUBLIC_API_URL=http://localhost:8999 
     ports: 
       - "3000:3000"
     restart: unless-stopped
