@@ -74,7 +74,6 @@ services:
       - DOWNSTREAM_BASE_URL=http://web-search:8000
       - DOWNSTREAM_LINK_PATH=/link/all
       - DOWNSTREAM_TEXT_PATH=/text/all
-      - DOWNSTREAM_TIMEOUT_SEC=60
 
     ports: 
       - "8999:8999"
@@ -101,7 +100,7 @@ services:
       api:
         condition: service_healthy
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8999 
+      - NEXT_PUBLIC_API_URL=/api
     ports: 
       - "3000:3000"
     restart: unless-stopped
