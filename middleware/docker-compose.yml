@@ -1,11 +1,24 @@
+version: "3.9"
+
 services:
   api:
     build: .
+    container_name: middleware-api
     environment:
-      DATABASE_URL: "postgresql+asyncpg://iot_zay4_user:DxrBBCLrmwYWGveqLdBRHDwYjgYjfWqM@dpg-d4ecckidbo4c73dee37g-a.frankfurt-postgres.render.com:5432/iot_zay4"
+      # ==== Server / port ====
+      SERVER_PORT: "8999"
+
+      # ==== Database (same Render DB as Python) ====
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://dpg-d4ecckidbo4c73dee37g-a.frankfurt-postgres.render.com:5432/iot_zay4"
+      SPRING_DATASOURCE_USERNAME: "iot_zay4_user"
+      SPRING_DATASOURCE_PASSWORD: "DxrBBCLrmwYWGveqLdBRHDwYjgYjfWqM"
+
+      # ==== Downstream API (Spring will map these to downstream.* props) ====
       DOWNSTREAM_BASE_URL: "https://retaliatory-bruna-unofficious.ngrok-free.dev"
+      DOWNSTREAM_LINK_PATH: "/link/all"
+      DOWNSTREAM_TEXT_PATH: "/text/all"
       DOWNSTREAM_TIMEOUT_SEC: "30"
-      PORT: "8999"
+
     ports:
       - "8999:8999"
     restart: unless-stopped
