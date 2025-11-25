@@ -30,6 +30,7 @@ export default function ResultsList({
     const [currentPage, setCurrentPage] = useState(1);
     const { data: session, status } = useSession();
     const isAuthenticated = !!session;
+    console.log('auth session:', session);
 
     const displayResults = isAuthenticated ? results : results.slice(0, UNAUTHENTICATED_LIMIT);
 
@@ -84,6 +85,7 @@ export default function ResultsList({
                 </div>
             </div>
 
+
             {/* View Mode Filter */}
             <div className="mb-5 space-y-2 border-b border-slate-200/50 dark:border-slate-700/50 pb-5">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
@@ -105,7 +107,7 @@ export default function ResultsList({
                 </div>
             </div>
 
-
+            {/* Selected Sentence Banner */}
             {selectedSentence && (
                 <div className="mb-5 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-100/30 dark:to-cyan-100/30 border border-blue-200/30 dark:border-blue-400/50 rounded-xl backdrop-blur-sm">
                     <div className="flex items-start gap-3">
@@ -122,7 +124,8 @@ export default function ResultsList({
                 </div>
             )}
 
-            <div className="space-y-4 max-h-[90vh] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-emerald-600 scrollbar-track-slate-200/30 dark:scrollbar-thumb-emerald-300 dark:scrollbar-track-slate-700/30">
+            {/* Results Container with Custom Scrollbar */}
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-3 scrollbar-thin scrollbar-thumb-emerald-600 scrollbar-track-slate-200/30 dark:scrollbar-thumb-emerald-300 dark:scrollbar-track-slate-700/30">
                 {displayResults.length === 0 && !isSearching && (
                     <div className="rounded-xl border border-dashed border-slate-200/30 dark:border-slate-700/30 p-12 text-center">
                         <div className="text-4xl mb-3">🔎</div>
@@ -143,12 +146,13 @@ export default function ResultsList({
                             key={r.id}
                             className="group relative bg-slate-50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-700/50 rounded-xl p-4 shadow-sm hover:shadow-lg hover:border-slate-300/50 dark:hover:border-slate-600/50 transition-all duration-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 backdrop-blur-sm"
                         >
+                            {/* Rank Badge */}
                             <div className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center bg-gradient-to-br from-emerald-500/30 to-cyan-500/30 dark:from-emerald-200/50 dark:to-cyan-200/50 border border-emerald-500/30 dark:border-emerald-400/50 rounded-full text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
                                 #{getSourceRank(globalIndex + 1)}
                             </div>
 
                             <div className="flex items-start gap-2">
-
+                                {/* Favicon */}
                                 <div className="flex-shrink-0 mt-1">
                                     <img
                                         src={`https://www.google.com/s2/favicons?domain=${r.domain}`}
@@ -256,7 +260,6 @@ export default function ResultsList({
                 )}
             </div>
 
-
             {isAuthenticated && displayResults.length > ITEMS_PER_PAGE ? (
                 <div className="mt-6 pt-5 border-t border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between">
                     <div className="text-xs text-slate-700 dark:text-slate-300">
@@ -273,7 +276,7 @@ export default function ResultsList({
                             ← Prev
                         </button>
 
-
+                        {/* Page Numbers */}
                         <div className="flex items-center gap-1">
                             {Array.from({ length: totalPages }, (_, i) => {
                                 const page = i + 1;
@@ -308,30 +311,31 @@ export default function ResultsList({
                         </button>
                     </div>
                 </div>
-            ) : <div className="mt-6 pt-5 border-t border-slate-200/50 dark:border-slate-700/50 text-center">
-                <div className="mb-3">
-                    <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
-                        🔍 Want to see all sources and advanced features?
-                    </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                        Unlock complete access to our Forensic Analysis Engine
+            ) : !isAuthenticated ? (
+                <div className="mt-6 pt-5 border-t border-slate-200/50 dark:border-slate-700/50 text-center">
+                    <div className="mb-3">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
+                            🔍 Want to see all {results.length} sources and advanced features?
+                        </p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                            Unlock complete access to our Forensic Analysis Engine
+                        </p>
+                    </div>
+                    <Link
+                        href="/register"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white text-sm font-semibold rounded-xl transition-all shadow-lg hover:shadow-emerald-500/25 dark:shadow-emerald-600/25"
+                    >
+                        <span>🚀</span>
+                        Sign Up to Unlock Full Access
+                    </Link>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                        Already have an account?{' '}
+                        <Link href="/login" className="text-emerald-600 dark:text-emerald-400 hover:underline">
+                            Sign in
+                        </Link>
                     </p>
                 </div>
-                <Link
-                    href="/register"
-                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-semibold rounded-lg transition-all shadow-lg hover:shadow-amber-500/25 dark:shadow-amber-600/25"
-                >
-                    <span>🚀</span>
-                    Sign Up to Unlock Full Access
-                </Link>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-                    Already have an account?{' '}
-                    <Link href="/login" className="text-emerald-600 dark:text-emerald-400 hover:underline">
-                        Sign in
-                    </Link>
-                </p>
-            </div>}
-
+            ) : null}
         </div>
     );
 }

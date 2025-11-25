@@ -1,6 +1,8 @@
+// types/types.ts
+
 export type JobStatus = "queued" | "processing" | "completed" | "failed";
 
-export type ViewMode = 'all' | 'news' | 'websites';
+export type ViewMode = "all" | "news" | "websites";
 
 export type ResultItem = {
   id: string;
@@ -10,7 +12,18 @@ export type ResultItem = {
   published: string;
   snippet: string;
   confidence: number;
-  type?: 'news' | 'website';
+  type?: "news" | "website";
+};
+
+export type BackendAnalysisSection = {
+  sentence: string;
+  search_term: string;
+  results: Array<{
+    url: string;
+    date: string;
+    title: string;
+    snippet: string;
+  }>;
 };
 
 export type AnalysisSection = {
@@ -18,15 +31,35 @@ export type AnalysisSection = {
   search_term: string;
   news_results: ResultItem[];
   website_results: ResultItem[];
+  entities?: Array<{
+    text: string;
+    type: string;
+    confidence: number;
+  }>;
 };
 
-export type AnalysisResult = {
+export interface TopNewsResponse {
+  items: Array<{
+    url: string;
+    title: string;
+    published_at: string;
+  }>;
+}
+
+export interface AnalysisResponse {
   status: string;
   cached: boolean;
   source_url: string;
+  downstream_ms: number;
   data: {
     warning: string | null;
-    result: AnalysisSection[];
-    oldest_result: ResultItem | null;
+    result: BackendAnalysisSection[];
+    oldest_result: any;
   };
-};
+}
+
+export interface RegisterResponse {
+  message?: string;
+  error?: string;
+  user?: any;
+}

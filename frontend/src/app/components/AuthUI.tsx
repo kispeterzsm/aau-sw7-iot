@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import { signIn as nextAuthSignIn, signIn } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Navbar from "./Navbar";
 import { validateSignUp, validateSignIn } from "../../lib/validators";
-import { registerUser } from "../actions/actions"; 
+import { registerUser } from "../actions/actions";
 
 type AuthUIProps = {
   initialSignIn?: boolean;
@@ -19,7 +19,7 @@ interface FormErrors {
 }
 
 const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
-  const [isSignInMode, setIsSignInMode] = React.useState<boolean>(initialSignIn); // Renamed to avoid conflict
+  const [isSignInMode, setIsSignInMode] = React.useState<boolean>(initialSignIn);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [name, setName] = React.useState("");
@@ -36,8 +36,8 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
 
   const validateForm = () => {
     setErrors({});
-    
-    if (isSignInMode) { // Use renamed variable
+
+    if (isSignInMode) {
       const result = validateSignIn({ email, password });
       if (!result.success) {
         const newErrors: FormErrors = {};
@@ -60,7 +60,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
         return false;
       }
     }
-    
+
     return true;
   };
 
@@ -68,11 +68,11 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
-  // Updated sign in handler using server action
+  // Client-side sign in
   const onSubmitSignIn = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setTouched({ email: true, password: true, name: true });
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -86,7 +86,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
 
       if (result?.error) {
         const errorMessage = result.error;
-        
+
         if (errorMessage.includes(" - ")) {
           const [title, description] = errorMessage.split(" - ");
           toast.error(title, {
@@ -112,52 +112,55 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
     }
   };
 
-  // Updated sign up handler using server action
+  // Registration with auto-signin
   const onSubmitSignUp = async (e?: React.FormEvent) => {
-  e?.preventDefault();
-  setTouched({ email: true, password: true, name: true });
-  
-  if (!validateForm()) return;
+    e?.preventDefault();
+    setTouched({ email: true, password: true, name: true });
 
-  setIsLoading(true);
+    if (!validateForm()) return;
 
-  try {
-    const result = await registerUser({ email, password, name });
-    
-    if (result.success) {
-      toast.success(result.message);
-      
-      const signInResult = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+    setIsLoading(true);
 
-      if (signInResult?.error) {
-        toast.warning("Account created", {
-          description: "Your account was created successfully. Please sign in to continue.",
+    try {
+      const result = await registerUser({ email, password, name });
+
+      if (result.success) {
+        toast.success("Account created!", {
+          description: "Your account has been successfully created.",
         });
-        setIsSignInMode(true);
+
+        // Auto-signin after successful registration using client-side signIn
+        const signInResult = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (signInResult?.error) {
+          toast.warning("Account created", {
+            description: "Your account was created successfully. Please sign in to continue.",
+          });
+          setIsSignInMode(true);
+        } else {
+          toast.success("Welcome to InfoTracer!", {
+            description: "Your account has been created and you're now signed in.",
+          });
+          router.push("/");
+        }
       } else {
-        toast.success("Welcome to InfoTracer!", {
-          description: "Your account has been created and you're now signed in.",
+        toast.error("Registration failed", {
+          description: result.error || "Unable to create account. Please try again.",
         });
-        router.push("/");
       }
-    } else {
-      toast.error(result.message, {
-        description: result.error, // This comes from the server action
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast.error("Registration failed", {
+        description: error.message || "Unable to create account. Please try again.",
       });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error: any) {
-    console.error("Unexpected registration error:", error);
-    toast.error("Registration failed", {
-      description: "An unexpected error occurred. Please try again.",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const switchMode = (isSignIn: boolean) => {
     setIsSignInMode(isSignIn);
@@ -206,11 +209,10 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onBlur={() => handleBlur("name")}
-                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${
-                    errors.name
-                      ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
-                      : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${errors.name
+                    ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
+                    : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
+                    }`}
                   placeholder="Full name"
                   aria-label="Full name"
                   required
@@ -228,11 +230,10 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   onBlur={() => handleBlur("email")}
                   type="email"
                   required
-                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${
-                    errors.email
-                      ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
-                      : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${errors.email
+                    ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
+                    : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
+                    }`}
                   placeholder="you@company.com"
                   aria-label="Email"
                 />
@@ -250,11 +251,10 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   type="password"
                   required
                   minLength={8}
-                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${
-                    errors.password
-                      ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
-                      : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${errors.password
+                    ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
+                    : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
+                    }`}
                   placeholder="Choose a secure password (min. 8 characters)"
                   aria-label="Password"
                 />
@@ -310,11 +310,10 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   onBlur={() => handleBlur("email")}
                   type="email"
                   required
-                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${
-                    errors.email
-                      ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
-                      : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${errors.email
+                    ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
+                    : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
+                    }`}
                   placeholder="you@company.com"
                   aria-label="Email"
                 />
@@ -332,11 +331,10 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                     onBlur={() => handleBlur("password")}
                     type={showPassword ? "text" : "password"}
                     required
-                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all pr-10 ${
-                      errors.password
-                        ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
-                        : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
-                    }`}
+                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all pr-10 ${errors.password
+                      ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
+                      : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
+                      }`}
                     placeholder="••••••••"
                     aria-label="Password"
                   />

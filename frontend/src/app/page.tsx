@@ -41,6 +41,7 @@ export default function Page() {
       setResults(newsResults);
     } catch (err) {
       console.error('Error loading top news:', err);
+      // Fallback
     }
   }
 
@@ -59,7 +60,6 @@ export default function Page() {
     return interval;
   }
 
-  // Main search handler using server actions
   async function handleSearch(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
@@ -81,10 +81,9 @@ export default function Page() {
     try {
       const isURL = trimmed.startsWith('http://') || trimmed.startsWith('https://');
 
-      // Start progress simulation
       const jobId = `job_${Date.now()}`;
       setJobId(jobId);
-      
+
       const handle = simulateProgress((progress, status) => {
         setStatus(status);
         setProgress(progress);
@@ -92,36 +91,33 @@ export default function Page() {
 
       subscriptionRef.current = handle;
 
-      // Use server actions for analysis
       let analysisResults: AnalysisSection[];
       if (isURL) {
         analysisResults = await analyzeURL(trimmed, 2);
       } else {
         analysisResults = await analyzeText(trimmed, 2);
       }
-      
+
       // Clear simulation and set results
       if (subscriptionRef.current) {
         window.clearInterval(subscriptionRef.current);
         subscriptionRef.current = null;
       }
-      
+
       setAnalysisSections(analysisResults);
-      
+
       // Combine all results for timeline
-      const allResults = analysisResults.flatMap(section => 
+      const allResults = analysisResults.flatMap(section =>
         [...section.news_results, ...section.website_results]
       );
       setResults(allResults);
-      
+
       setProgress(100);
       setStatus("completed");
-      
+
     } catch (err: any) {
       setError(err?.message || "Analysis failed. Using sample data for demonstration.");
       setStatus("failed");
-      
-      // Fallback is already handled in the server actions
     } finally {
       setIsSearching(false);
     }
@@ -132,15 +128,14 @@ export default function Page() {
     if (selectedSentence) {
       const section = analysisSections.find(s => s.sentence === selectedSentence);
       if (!section) return [];
-      
+
       switch (viewMode) {
         case 'news': return section.news_results;
         case 'websites': return section.website_results;
         default: return [...section.news_results, ...section.website_results];
       }
     }
-    
-    // For news feed or when no sentence selected
+
     switch (viewMode) {
       case 'news': return results.filter(r => r.type === 'news');
       case 'websites': return results.filter(r => r.type === 'website');
@@ -148,16 +143,6 @@ export default function Page() {
     }
   }, [results, analysisSections, selectedSentence, viewMode]);
 
-  // Get sources for a specific sentence
-  const getSentenceSources = (sentence: string) => {
-    const section = analysisSections.find(s => s.sentence === sentence);
-    if (!section) return { news: [], websites: [] };
-    
-    return {
-      news: section.news_results,
-      websites: section.website_results
-    };
-  };
 
   async function copyLink(url: string) {
     try {
@@ -167,16 +152,16 @@ export default function Page() {
     } catch { }
   }
 
-  const avgConfidence = useMemo(() => 
-    filteredResults.length ? 
-    Math.round((filteredResults.reduce((s, r) => s + r.confidence, 0) / filteredResults.length) * 100) : 0, 
+  const avgConfidence = useMemo(() =>
+    filteredResults.length ?
+      Math.round((filteredResults.reduce((s, r) => s + r.confidence, 0) / filteredResults.length) * 100) : 0,
     [filteredResults]
   );
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white text-slate-900 transition-colors duration-300 antialiased dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
       <Navbar />
 
-      {/* Animated Background Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Gradient Orbs */}
         <div className="absolute top-20 left-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse dark:bg-emerald-500/10"></div>
@@ -204,7 +189,6 @@ export default function Page() {
 
         {/* Grid Layout - Components */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Column - Search Panel (4 columns) */}
           <div className="lg:col-span-4">
             <div className="sticky top-24">
               <SearchPanel
@@ -222,10 +206,8 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Center Column - Results List (5 columns) */}
           <div className="lg:col-span-5">
             <div className="relative">
-              {/* Floating Card Effect */}
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 rounded-3xl blur-xl dark:from-cyan-500/5 dark:to-emerald-500/5"></div>
               <div className="relative">
                 <ResultsList
@@ -241,15 +223,13 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Right Column - Timeline Panel (3 columns) */}
           <aside className="lg:col-span-3">
             <div className="sticky top-24">
               <div className="relative">
-                {/* Floating Card Effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 rounded-3xl blur-xl dark:from-emerald-500/5 dark:to-cyan-500/5"></div>
                 <div className="relative">
-                  <TimelinePanel 
-                    results={filteredResults} 
+                  <TimelinePanel
+                    results={filteredResults}
                     avgConfidence={avgConfidence}
                     analysisSections={analysisSections}
                     selectedSentence={selectedSentence}
@@ -261,7 +241,6 @@ export default function Page() {
           </aside>
         </div>
 
-        {/* Empty State - When no results */}
         {!isSearching && filteredResults.length === 0 && (
           <div className="mt-16 text-center">
             <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-200/20 mb-4 dark:border-emerald-500/20">
@@ -275,7 +254,6 @@ export default function Page() {
         )}
       </section>
 
-      {/* Text Highlighter Modal - Shows original content with highlighted sentences */}
       {analysisSections.length > 0 && originalContent && (
         <TextHighlighter
           content={originalContent}
@@ -289,7 +267,6 @@ export default function Page() {
         />
       )}
 
-      {/* Subtle Footer Divider */}
       <footer className="relative z-10 py-10 border-t border-slate-200/30 dark:border-slate-700/30">
         <div className="text-center text-xs text-slate-600 dark:text-slate-400">
           <p>Information Origin Tracker • Forensic Analysis Engine</p>

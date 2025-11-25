@@ -63,7 +63,6 @@ export default function SearchPanel({
                         </span>
                     </div>
 
-
                     <div className="relative group">
                         <textarea
                             value={input}
@@ -76,12 +75,13 @@ export default function SearchPanel({
                         </div>
                     </div>
 
-
+                    {/* Input Suggestion */}
                     <div className="text-xs text-slate-500 flex items-center gap-1.5">
                         <span>💡</span>
                         <span>Longer inputs provide better context for tracing</span>
                     </div>
                 </div>
+
 
                 <div className="grid grid-cols-3 gap-3">
 
@@ -137,7 +137,7 @@ export default function SearchPanel({
                     </div>
                 </div>
 
-
+                {/* Error Display - Enhanced */}
                 {error && (
                     <div className="p-4 bg-gradient-to-r from-red-100 to-red-50 border border-red-200 rounded-xl backdrop-blur-sm animate-pulse dark:from-red-900/20 dark:to-red-900/10 dark:border-red-500/40">
                         <div className="flex items-start gap-3">
