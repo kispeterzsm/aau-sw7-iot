@@ -7,37 +7,9 @@ import TimelinePanel from "./components/TimelinePanel";
 import { ResultItem, JobStatus, AnalysisSection, ViewMode } from "@/types/types";
 import Navbar from "./components/Navbar";
 import TextHighlighter from "./components/TextHighlighter";
-
-const SAMPLE_RESPONSE = {
-  "status": "ok",
-  "cached": true,
-  "source_url": "https://www.nbcnews.com/health/health-news/oz-trump-plan-replace-aca-obamacare-no-specific-rcna239232",
-  "downstream_ms": 0,
-  "data": {
-    "warning": null,
-    "result": [
-      {
-        "sentence": "Dr. Mehmet Oz, the administrator of the Centers for Medicare and Medicaid Services, suggested Wednesday that President Donald Trump has a plan to replace the Affordable Care Act — but provided no specifics about the proposal.",
-        "search_term": "Affordable Care Act Trump plan",
-        "news_results": [],
-        "website_results": []
-      },
-      {
-        "sentence": "I fully believe the president has a plan, Oz told NBC News' Meet the Press moderator Kristen Welker.",
-        "search_term": "president president plan", 
-        "news_results": [],
-        "website_results": []
-      },
-      {
-        "sentence": "The Congressional Budget Office projects that nearly 4 million will drop their coverage if the subsidies aren't extended.",
-        "search_term": "Congressional Budget Office subsidies",
-        "news_results": [],
-        "website_results": []
-      }
-    ],
-    "oldest_result": null
-  }
-};
+import { loadTopNews, analyzeURL, analyzeText } from "./actions/actions";
+import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
   const [mounted, setMounted] = useState(false);
@@ -55,125 +27,21 @@ export default function Page() {
   const [originalContent, setOriginalContent] = useState<string>("");
 
   const subscriptionRef = useRef<number | null>(null);
+  const { data: session } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
-    loadTopNews();
+    handleLoadTopNews();
   }, []);
 
-  // API 1: Get Top News
-  async function loadTopNews(limit: number = 15) {
+  async function handleLoadTopNews(limit: number = 10) {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/news/top?limit=${limit}`);
-      if (!response.ok) throw new Error('Failed to fetch top news');
-      
-      const data = await response.json();
-      
-      const newsResults: ResultItem[] = data.items.map((item: any, index: number) => ({
-        id: `news-${index}-${Date.now()}`,
-        url: item.url,
-        title: item.title,
-        domain: new URL(item.url).hostname,
-        published: item.published_at,
-        snippet: item.title,
-        confidence: 0.85,
-        type: 'news'
-      }));
-
+      const newsResults = await loadTopNews(limit);
       setResults(newsResults);
     } catch (err) {
       console.error('Error loading top news:', err);
-      setResults(generateMockResults());
     }
-  }
-
-  // Analyze URL
-  async function analyzeURL(url: string, searchDepth: number = 2): Promise<AnalysisSection[]> {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/search/link`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ url, search_depth: searchDepth }),
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
-      return transformAnalysisResults(data);
-    } catch (error) {
-      console.error('Real API failed, using sample data');
-      return transformAnalysisResults(SAMPLE_RESPONSE);
-    }
-  }
-
-  // Analyze Text  
-  async function analyzeText(text: string, searchDepth: number = 2): Promise<AnalysisSection[]> {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/search/text`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ input: text, search_depth: searchDepth }),
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
-      return transformAnalysisResults(data);
-    } catch (error) {
-      console.error('Real API failed, using sample data');
-      return transformAnalysisResults(SAMPLE_RESPONSE);
-    }
-  }
-
-  // Transform API response to analysis sections with mock results
-  function transformAnalysisResults(apiData: any): AnalysisSection[] {
-    const sections: AnalysisSection[] = apiData.data.result.map((section: any, index: number) => {
-      // Generate mock news results
-      const newsResults: ResultItem[] = Array.from({ length: 2 + Math.floor(Math.random() * 2) }, (_, i) => ({
-        id: `news-${index}-${i}-${Date.now()}`,
-        url: `https://news-site.com/article-${index}-${i}`,
-        title: `News: ${section.search_term}`,
-        domain: 'news-site.com',
-        published: new Date(Date.now() - (index * 3 + i) * 24 * 60 * 60 * 1000).toISOString(),
-        snippet: `News coverage about: ${section.sentence}`,
-        confidence: 0.8 + Math.random() * 0.15,
-        type: 'news'
-      }));
-
-      // Generate mock website results  
-      const websiteResults: ResultItem[] = Array.from({ length: 3 + Math.floor(Math.random() * 3) }, (_, i) => ({
-        id: `web-${index}-${i}-${Date.now()}`,
-        url: `https://blog-site.com/post-${index}-${i}`,
-        title: `Blog: ${section.search_term}`,
-        domain: 'blog-site.com',
-        published: new Date(Date.now() - (index * 2 + i) * 24 * 60 * 60 * 1000).toISOString(),
-        snippet: `Blog discussion about: ${section.sentence}`,
-        confidence: 0.7 + Math.random() * 0.2,
-        type: 'website'
-      }));
-
-      return {
-        ...section,
-        news_results: newsResults,
-        website_results: websiteResults
-      };
-    });
-
-    return sections;
-  }
-
-  // Generate mock results for news feed
-  function generateMockResults(): ResultItem[] {
-    return Array.from({ length: 5 }, (_, i) => ({
-      id: `mock-${i}-${Date.now()}`,
-      url: `https://example.com/news-${i}`,
-      title: `Top News Story ${i + 1}`,
-      domain: 'example.com',
-      published: new Date(Date.now() - i * 60 * 60 * 1000).toISOString(),
-      snippet: `This is a sample news story for demonstration.`,
-      confidence: 0.8 + Math.random() * 0.15,
-      type: 'news'
-    }));
   }
 
   // Progress simulation
@@ -191,7 +59,7 @@ export default function Page() {
     return interval;
   }
 
-  // Main search handler
+  // Main search handler using server actions
   async function handleSearch(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
@@ -224,7 +92,7 @@ export default function Page() {
 
       subscriptionRef.current = handle;
 
-      // Use appropriate API
+      // Use server actions for analysis
       let analysisResults: AnalysisSection[];
       if (isURL) {
         analysisResults = await analyzeURL(trimmed, 2);
@@ -253,16 +121,7 @@ export default function Page() {
       setError(err?.message || "Analysis failed. Using sample data for demonstration.");
       setStatus("failed");
       
-      // Fallback to sample data
-      setTimeout(() => {
-        const sampleResults = transformAnalysisResults(SAMPLE_RESPONSE);
-        setAnalysisSections(sampleResults);
-        const allResults = sampleResults.flatMap(section => 
-          [...section.news_results, ...section.website_results]
-        );
-        setResults(allResults);
-        setProgress(100);
-      }, 1000);
+      // Fallback is already handled in the server actions
     } finally {
       setIsSearching(false);
     }
@@ -313,7 +172,6 @@ export default function Page() {
     Math.round((filteredResults.reduce((s, r) => s + r.confidence, 0) / filteredResults.length) * 100) : 0, 
     [filteredResults]
   );
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white text-slate-900 transition-colors duration-300 antialiased dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
       <Navbar />

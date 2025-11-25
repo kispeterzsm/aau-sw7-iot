@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { signIn } from "next-auth/react";
+import { signIn as nextAuthSignIn, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Navbar from "./Navbar";
 import { validateSignUp, validateSignIn } from "../../lib/validators";
+import { registerUser } from "../actions/actions"; 
 
 type AuthUIProps = {
   initialSignIn?: boolean;
@@ -18,7 +19,7 @@ interface FormErrors {
 }
 
 const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
-  const [signInUser, setSignInUser] = React.useState<boolean>(initialSignIn);
+  const [isSignInMode, setIsSignInMode] = React.useState<boolean>(initialSignIn); // Renamed to avoid conflict
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [name, setName] = React.useState("");
@@ -36,7 +37,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
   const validateForm = () => {
     setErrors({});
     
-    if (signInUser) {
+    if (isSignInMode) { // Use renamed variable
       const result = validateSignIn({ email, password });
       if (!result.success) {
         const newErrors: FormErrors = {};
@@ -63,11 +64,11 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
     return true;
   };
 
-
   const handleBlur = (field: "email" | "password" | "name") => {
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
+  // Updated sign in handler using server action
   const onSubmitSignIn = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setTouched({ email: true, password: true, name: true });
@@ -83,19 +84,19 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
         redirect: false,
       });
 
-     if (result?.error) {
-      const errorMessage = result.error;
-      
-      if (errorMessage.includes(" - ")) {
-        const [title, description] = errorMessage.split(" - ");
-        toast.error(title, {
-          description: description,
-        });
-      } else {
-        toast.error("Sign in failed", {
-          description: errorMessage,
-        });
-      }
+      if (result?.error) {
+        const errorMessage = result.error;
+        
+        if (errorMessage.includes(" - ")) {
+          const [title, description] = errorMessage.split(" - ");
+          toast.error(title, {
+            description: description,
+          });
+        } else {
+          toast.error("Sign in failed", {
+            description: errorMessage,
+          });
+        }
       } else {
         toast.success("Welcome back!", {
           description: "You have been successfully signed in.",
@@ -111,7 +112,8 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
     }
   };
 
-const onSubmitSignUp = async (e?: React.FormEvent) => {
+  // Updated sign up handler using server action
+  const onSubmitSignUp = async (e?: React.FormEvent) => {
   e?.preventDefault();
   setTouched({ email: true, password: true, name: true });
   
@@ -120,55 +122,37 @@ const onSubmitSignUp = async (e?: React.FormEvent) => {
   setIsLoading(true);
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8999'}/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const responseData = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      if (res.status === 500) {
-        if (responseData?.error?.includes('unique') || 
-            responseData?.message?.includes('already exists') ||
-            responseData?.message?.includes('duplicate')) {
-          toast.error("Account already exists", {
-            description: "An account with this email already exists. Please sign in instead.",
-          });
-          return;
-        }
-      }
+    const result = await registerUser({ email, password, name });
+    
+    if (result.success) {
+      toast.success(result.message);
       
-      throw new Error(responseData?.message || responseData?.error || "Registration failed");
-    }
-
-    toast.success("Account created!", {
-      description: "Your account has been successfully created.",
-    });
-
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (result?.error) {
-      toast.warning("Account created", {
-        description: "Your account was created successfully. Please sign in to continue.",
+      const signInResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
       });
+
+      if (signInResult?.error) {
+        toast.warning("Account created", {
+          description: "Your account was created successfully. Please sign in to continue.",
+        });
+        setIsSignInMode(true);
+      } else {
+        toast.success("Welcome to InfoTracer!", {
+          description: "Your account has been created and you're now signed in.",
+        });
+        router.push("/");
+      }
     } else {
-      toast.success("Welcome to InfoTracer!", {
-        description: "Your account has been created and you're now signed in.",
+      toast.error(result.message, {
+        description: result.error, // This comes from the server action
       });
-      router.push("/");
     }
   } catch (error: any) {
-    console.error("Registration error:", error);
+    console.error("Unexpected registration error:", error);
     toast.error("Registration failed", {
-      description: error.message || "Unable to create account. Please try again.",
+      description: "An unexpected error occurred. Please try again.",
     });
   } finally {
     setIsLoading(false);
@@ -176,7 +160,7 @@ const onSubmitSignUp = async (e?: React.FormEvent) => {
 };
 
   const switchMode = (isSignIn: boolean) => {
-    setSignInUser(isSignIn);
+    setIsSignInMode(isSignIn);
     setErrors({});
     setTouched({ email: false, password: false, name: false });
     if (isSignIn) {
@@ -199,11 +183,11 @@ const onSubmitSignUp = async (e?: React.FormEvent) => {
 
           {/* Left: Sign Up panel */}
           <div
-            className={`absolute top-0 left-0 h-full w-1/2 transition-all duration-500 ease-in-out ${signInUser ? "opacity-0 z-10 translate-x-0" : "opacity-100 z-30 translate-x-full"}`}
-            aria-hidden={signInUser}
+            className={`absolute top-0 left-0 h-full w-1/2 transition-all duration-500 ease-in-out ${isSignInMode ? "opacity-0 z-10 translate-x-0" : "opacity-100 z-30 translate-x-full"}`}
+            aria-hidden={isSignInMode}
           >
             <form
-              onSubmit={onSubmitSignUp}
+              onSubmit={onSubmitSignUp} // Use the new onSubmitSignUp
               className="h-full flex flex-col items-center justify-center p-10 bg-gradient-to-br from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 rounded-l-3xl"
               noValidate
             >
@@ -301,8 +285,8 @@ const onSubmitSignUp = async (e?: React.FormEvent) => {
 
           {/* Right: Sign In panel */}
           <div
-            className={`absolute top-0 left-0 h-full w-1/2 transition-all duration-500 ease-in-out z-20 ${signInUser ? "translate-x-0" : "translate-x-full"}`}
-            aria-hidden={!signInUser}
+            className={`absolute top-0 left-0 h-full w-1/2 transition-all duration-500 ease-in-out z-20 ${isSignInMode ? "translate-x-0" : "translate-x-full"}`}
+            aria-hidden={!isSignInMode}
           >
             <form
               onSubmit={onSubmitSignIn}
@@ -404,15 +388,15 @@ const onSubmitSignUp = async (e?: React.FormEvent) => {
           </div>
 
           <div
-            className={`absolute top-0 left-1/2 h-full w-1/2 overflow-hidden transition-transform duration-500 ease-in-out z-40 ${signInUser ? "transform translate-x-0" : "transform -translate-x-full"}`}
+            className={`absolute top-0 left-1/2 h-full w-1/2 overflow-hidden transition-transform duration-500 ease-in-out z-40 ${isSignInMode ? "transform translate-x-0" : "transform -translate-x-full"}`}
           >
             <div
-              className={`relative left-[-100%] h-full w-[200%] transform transition-transform duration-500 ease-in-out ${signInUser ? "translate-x-0" : "translate-x-[50%]"}`}
+              className={`relative left-[-100%] h-full w-[200%] transform transition-transform duration-500 ease-in-out ${isSignInMode ? "translate-x-0" : "translate-x-[50%]"}`}
               style={{
                 backgroundImage: "linear-gradient(135deg, rgba(16,185,129,0.95) 0%, rgba(6,182,212,0.9) 50%, rgba(16,185,129,0.85) 100%)",
               }}
             >
-              <div className={`absolute top-0 left-0 h-full w-1/2 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ease-in-out ${signInUser ? "-translate-x-1/6" : "translate-x-0"}`}>
+              <div className={`absolute top-0 left-0 h-full w-1/2 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ease-in-out ${isSignInMode ? "-translate-x-1/6" : "translate-x-0"}`}>
                 <div className="mb-6">
                   <h3 className="text-3xl font-bold text-white mb-2">Welcome Back! 👋</h3>
                   <div className="h-1 w-12 bg-white/40 rounded-full mx-auto"></div>
@@ -429,7 +413,7 @@ const onSubmitSignUp = async (e?: React.FormEvent) => {
                 </button>
               </div>
 
-              <div className={`absolute top-0 right-0 h-full w-1/2 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ease-in-out ${signInUser ? "translate-x-0" : "translate-x-1/6"}`}>
+              <div className={`absolute top-0 right-0 h-full w-1/2 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ease-in-out ${isSignInMode ? "translate-x-0" : "translate-x-1/6"}`}>
                 <div className="mb-6">
                   <h3 className="text-3xl font-bold text-white mb-2">New Here? 🚀</h3>
                   <div className="h-1 w-12 bg-white/40 rounded-full mx-auto"></div>
