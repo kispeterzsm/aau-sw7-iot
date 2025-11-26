@@ -199,18 +199,6 @@ export default function TextHighlighter({
                             )}
                         </div>
 
-                        {/* Entity Status Notice */}
-                        {!hasEntities && (
-                            <div className="border-t border-slate-600/50 pt-3 mt-3">
-                                <p className="text-xs text-slate-400 flex items-start gap-2">
-                                    <span>ℹ️</span>
-                                    <span>
-                                        Entity recognition (names, places, organizations) will appear here once available from our analysis engine.
-                                        Currently showing search terms and analyzed sentences.
-                                    </span>
-                                </p>
-                            </div>
-                        )}
 
 
                         <div className="border-t border-slate-600/50 pt-3 mt-3">
@@ -240,8 +228,8 @@ export default function TextHighlighter({
                                         key={idx}
                                         onClick={() => onSentenceSelect(section.sentence)}
                                         className={`w-full text-left p-2 rounded-lg text-xs transition-all border ${selectedSentence === section.sentence
-                                                ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
-                                                : 'bg-slate-800/30 border-slate-600/30 text-slate-300 hover:bg-slate-800/50'
+                                            ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
+                                            : 'bg-slate-800/30 border-slate-600/30 text-slate-300 hover:bg-slate-800/50'
                                             }`}
                                     >
                                         <div className="font-medium truncate">{section.search_term}</div>

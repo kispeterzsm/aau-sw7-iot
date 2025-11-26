@@ -1,5 +1,3 @@
-// types/types.ts
-
 export type JobStatus = "queued" | "processing" | "completed" | "failed";
 
 export type ViewMode = "all" | "news" | "websites";
@@ -18,9 +16,15 @@ export type ResultItem = {
 export type BackendAnalysisSection = {
   sentence: string;
   search_term: string;
-  results: Array<{
+  news_results: Array<{  
     url: string;
-    date: string;
+    date: string | null;
+    title: string;
+    snippet: string;
+  }>;
+  website_results: Array<{  
+    url: string;
+    date: string | null;
     title: string;
     snippet: string;
   }>;

@@ -123,7 +123,6 @@ export default function Page() {
     }
   }
 
-  // Get filtered results based on view mode
   const filteredResults = useMemo(() => {
     if (selectedSentence) {
       const section = analysisSections.find(s => s.sentence === selectedSentence);
