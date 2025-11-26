@@ -15,9 +15,17 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**") // Apply to all endpoints
                         .allowedOrigins(
+                            // Local Development
                             "http://localhost:3000", 
                             "http://127.0.0.1:3000",
-                            "https://retaliatory-bruna-unofficious.ngrok-free.dev"
+                            
+                            // Kubernetes NodePort Access
+                            "http://localhost:30000",
+                            // Master Node Tailscale IP
+                            
+                            // Public Ngrok Access
+                            "https://retaliatory-bruna-unofficious.ngrok-free.dev",
+                            "http://retaliatory-bruna-unofficious.ngrok-free.dev"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")

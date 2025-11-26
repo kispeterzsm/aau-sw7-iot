@@ -1,0 +1,265 @@
+# Credentials and Tokens
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+stringData:
+  POSTGRES_USER: "iot_zay4_user"
+  POSTGRES_PASSWORD: "POSTGRES_PASSWORD"
+  POSTGRES_DB: "iot_zay4"
+  HF_TOKEN: "HF_TOKEN"
+  AUTH_TOKEN_NGROK: "AUTH_TOKEN_NGROK"
+
+---
+# DB
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pg-data-pvc
+spec:
+  storageClassName: manual
+  volumeName: pg-physical-volume
+  accessModes: [ "ReadWriteOnce" ]
+  resources:
+    requests:
+      storage: 5Gi
+  selector:
+    matchLabels:
+      type: local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-master
+      containers:
+      - name: postgres
+        image: postgres:16
+        env:
+        - name: POSTGRES_DB
+          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_DB } }
+        - name: POSTGRES_USER
+          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_USER } }
+        - name: POSTGRES_PASSWORD
+          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_PASSWORD } }
+        ports: [ { containerPort: 5432 } ]
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pg-storage
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "iot_zay4_user", "-d", "iot_zay4"]
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: pg-storage
+        persistentVolumeClaim:
+          claimName: pg-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-service
+spec:
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+# NLP Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nlp-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nlp-service
+  template:
+    metadata:
+      labels:
+        app: nlp-service
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: nlp-service
+      containers:
+      - name: nlp
+        image: jimpoz/aau-sw7-iot-nlp-service:latest
+        imagePullPolicy: Always
+        ports: [ { containerPort: 8080 } ]
+        env:
+        - name: HF_TOKEN
+          valueFrom: { secretKeyRef: { name: app-secrets, key: HF_TOKEN } }
+        - name: MODEL_NAME
+          value: "google/gemma-3-4b-it"
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nlp-service
+spec:
+  selector:
+    app: nlp-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+---
+# Web Search
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-search
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-search
+  template:
+    metadata:
+      labels:
+        app: web-search
+    spec:
+      containers:
+      - name: scraper
+        image: jimpoz/aau-sw7-iot-web-search:latest
+        imagePullPolicy: Always
+        ports: [ { containerPort: 8000 } ]
+        env:
+        - name: NLP_SERVICE_URL
+          value: "http://nlp-service:8080"
+        - name: AUTH_TOKEN_NGROK
+          valueFrom: { secretKeyRef: { name: app-secrets, key: AUTH_TOKEN_NGROK } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-search-service
+spec:
+  selector:
+    app: web-search
+  ports:
+    - port: 8000
+      targetPort: 8000
+
+---
+# Middleware
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: middleware-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: middleware-api
+  template:
+    metadata:
+      labels:
+        app: middleware-api
+    spec:
+      containers:
+      - name: api
+        image: jimpoz/aau-sw7-iot-api:latest
+        imagePullPolicy: Always
+        ports: [ { containerPort: 8999 } ]
+        env:
+        - name: SERVER_PORT
+          value: "8999"
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://db-service:5432/iot_zay4"
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_USER } }
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_PASSWORD } }
+        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+          value: "org.postgresql.Driver"
+        - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+          value: "update"
+        - name: DOWNSTREAM_BASE_URL
+          value: "http://web-search-service:8000"
+        - name: DOWNSTREAM_LINK_PATH
+          value: "/link/all"
+        - name: DOWNSTREAM_TEXT_PATH
+          value: "/text/all"
+        - name: DOWNSTREAM_TIMEOUT_SEC
+          value: "300"
+        livenessProbe:
+          exec:
+            command: ["curl", "-f", "http://localhost:8999/health"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: middleware-service
+spec:
+  selector:
+    app: middleware-api
+  ports:
+    - port: 8999
+      targetPort: 8999
+
+---
+# Frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: app
+        image: jimpoz/aau-sw7-iot-frontend:latest
+        imagePullPolicy: Always
+        ports: [ { containerPort: 3000 } ]
+        env:
+        - name: NEXT_PUBLIC_API_URL
+          value: "/api"
+        - name: INTERNAL_API_URL
+          value: "http://middleware-service:8999"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  type: NodePort 
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30000

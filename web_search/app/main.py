@@ -143,7 +143,8 @@ async def text_all(data: Input):
     if len(words) < 5: 
         warning_message = "Input is very short. Searching directly."
         queries = [{"search_term": text_input, "sentence": text_input}]
-        
+        data.search_depth = 30
+
         try:
             original_lang = detect(text_input)
         except:
@@ -151,6 +152,7 @@ async def text_all(data: Input):
             
     else:
         # If the sentence is long pass it to NLP service
+        data.search_depth = 5
         try:
             top_x = 1 if len(text_input.split('.')) <= 2 else 3
             
