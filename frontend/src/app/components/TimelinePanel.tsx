@@ -11,26 +11,26 @@ type Props = {
     onSentenceSelect: (sentence: string | null) => void;
 };
 
-export default function TimelinePanel({ 
-    results, 
-    avgConfidence, 
-    analysisSections, 
-    selectedSentence, 
-    onSentenceSelect 
+export default function TimelinePanel({
+    results,
+    avgConfidence,
+    analysisSections,
+    selectedSentence,
+    onSentenceSelect
 }: Props) {
     const earliestDate = results[0] ? new Date(results[0].published) : null;
     const latestDate = results.length > 0 ? new Date(results[results.length - 1].published) : null;
-    const timeSpan = earliestDate && latestDate ? 
+    const timeSpan = earliestDate && latestDate ?
         Math.ceil((latestDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-    // Enhanced: Calculate timeline positions for visualization
+
     const timelineData = useMemo(() => {
         if (!earliestDate || !latestDate || timeSpan === 0) return [];
-        
+
         return results.map(result => {
             const resultDate = new Date(result.published);
-            const position = ((resultDate.getTime() - earliestDate.getTime()) / 
-                            (latestDate.getTime() - earliestDate.getTime())) * 100;
+            const position = ((resultDate.getTime() - earliestDate.getTime()) /
+                (latestDate.getTime() - earliestDate.getTime())) * 100;
             return { result, position };
         });
     }, [results, earliestDate, latestDate, timeSpan]);
@@ -38,21 +38,21 @@ export default function TimelinePanel({
     // Group results by spread type
     const spreadAnalysis = useMemo(() => {
         if (timeSpan === 0) return { early: 0, middle: 0, late: 0 };
-        
+
         const earlyThreshold = timeSpan * 0.33;
         const lateThreshold = timeSpan * 0.66;
-        
+
         let early = 0, middle = 0, late = 0;
-        
+
         results.forEach(result => {
             const resultDate = new Date(result.published);
             const daysSinceEarliest = (resultDate.getTime() - earliestDate!.getTime()) / (1000 * 60 * 60 * 24);
-            
+
             if (daysSinceEarliest <= earlyThreshold) early++;
             else if (daysSinceEarliest <= lateThreshold) middle++;
             else late++;
         });
-        
+
         return { early, middle, late };
     }, [results, earliestDate, timeSpan]);
 
@@ -72,12 +72,11 @@ export default function TimelinePanel({
             </div>
 
             <div className="mt-6 space-y-6">
-                {/* Enhanced Interactive Timeline Visualization */}
                 <div className="space-y-3">
                     <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide dark:text-slate-300">
                         Information Flow Timeline
                     </div>
-                    
+
                     {/* Main Timeline Visualization */}
                     <div className="relative bg-gradient-to-r from-slate-100 to-slate-50 rounded-xl p-4 overflow-hidden border border-slate-200/30 dark:bg-gradient-to-r dark:from-slate-800 dark:to-slate-700 dark:border-slate-600/30">
                         {/* Animated background gradient */}
@@ -94,18 +93,18 @@ export default function TimelinePanel({
                                     <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.5" />
                                 </linearGradient>
                                 <filter id="glow">
-                                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
                                     <feMerge>
-                                        <feMergeNode in="coloredBlur"/>
-                                        <feMergeNode in="SourceGraphic"/>
+                                        <feMergeNode in="coloredBlur" />
+                                        <feMergeNode in="SourceGraphic" />
                                     </feMerge>
                                 </filter>
                             </defs>
-                            
+
                             {/* Main timeline line with gradient */}
                             <line x1="20" y1="55" x2="280" y2="55" stroke="url(#timelineGradient)" strokeWidth="3" filter="url(#glow)" />
-                            
-                            {/* Earliest marker - Origin point */}
+
+
                             <g>
                                 <circle cx="50" cy="55" r="10" fill="#10b981" opacity="0.2" />
                                 <circle cx="50" cy="55" r="8" fill="#10b981" />
@@ -116,7 +115,6 @@ export default function TimelinePanel({
                                 Earliest
                             </text>
 
-                            {/* Spread marker - Peak distribution */}
                             <g>
                                 <circle cx="150" cy="55" r="10" fill="#ef4444" opacity="0.2" />
                                 <circle cx="150" cy="55" r="8" fill="#ef4444" />
@@ -126,7 +124,6 @@ export default function TimelinePanel({
                                 Peak Spread
                             </text>
 
-                            {/* Latest marker - Current state */}
                             <g>
                                 <circle cx="250" cy="55" r="10" fill="#f59e0b" opacity="0.2" />
                                 <circle cx="250" cy="55" r="8" fill="#f59e0b" />
@@ -138,7 +135,6 @@ export default function TimelinePanel({
                             </text>
                         </svg>
 
-                        {/* Spread Statistics Cards */}
                         <div className="grid grid-cols-3 gap-2 mt-6 relative z-20">
                             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/30 rounded-lg p-3 text-center items-center flex flex-col dark:from-emerald-900/40 dark:to-emerald-900/20 dark:border-emerald-500/30">
                                 <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{spreadAnalysis.early}</div>
@@ -156,7 +152,6 @@ export default function TimelinePanel({
                     </div>
                 </div>
 
-                {/* Analyzed Sentences List */}
                 {analysisSections.length > 0 && (
                     <div className="space-y-2">
                         <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide dark:text-slate-300">
@@ -169,16 +164,15 @@ export default function TimelinePanel({
                                     onClick={() => onSentenceSelect(
                                         selectedSentence === section.sentence ? null : section.sentence
                                     )}
-                                    className={`w-full text-left p-3 rounded-xl text-xs transition-all duration-200 border backdrop-blur-sm ${
-                                        selectedSentence === section.sentence
+                                    className={`w-full text-left p-3 rounded-xl text-xs transition-all duration-200 border backdrop-blur-sm ${selectedSentence === section.sentence
                                             ? 'bg-gradient-to-r from-emerald-100/50 to-cyan-100/50 border-emerald-400/50 shadow-lg shadow-emerald-200'
                                             : 'bg-slate-50 border-slate-200/30 hover:bg-slate-100/50 hover:border-slate-300/50 dark:bg-slate-800/30 dark:border-slate-700/30 dark:hover:bg-slate-700/50'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="font-medium text-slate-900 dark:text-slate-200 truncate text-xs">{section.search_term}</div>
                                     <div className="text-slate-600 dark:text-slate-400 mt-2 truncate text-xs leading-relaxed">
-                                        {section.sentence.length > 60 
-                                            ? section.sentence.substring(0, 60) + '...' 
+                                        {section.sentence.length > 60
+                                            ? section.sentence.substring(0, 60) + '...'
                                             : section.sentence
                                         }
                                     </div>
@@ -201,7 +195,7 @@ export default function TimelinePanel({
                     <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide dark:text-slate-300">
                         Trace Statistics
                     </div>
-                    
+
                     <div className="space-y-2">
                         <div className="flex justify-between items-center text-sm group">
                             <span className="text-slate-600 flex items-center gap-2 dark:text-slate-400">
@@ -209,10 +203,10 @@ export default function TimelinePanel({
                                 First occurrence
                             </span>
                             <span className="font-medium text-slate-900 font-mono dark:text-slate-200">
-                                {earliestDate ? earliestDate.toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'short', 
-                                    day: 'numeric' 
+                                {earliestDate ? earliestDate.toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
                                 }) : "—"}
                             </span>
                         </div>
@@ -234,10 +228,10 @@ export default function TimelinePanel({
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
                                 Top source
                             </span>
-                            <a 
-                                href={results[0]?.url ?? '#'} 
-                                target="_blank" 
-                                rel="noreferrer" 
+                            <a
+                                href={results[0]?.url ?? '#'}
+                                target="_blank"
+                                rel="noreferrer"
                                 className="text-emerald-600 hover:text-emerald-500 font-medium truncate ml-2 max-w-[120px] hover:underline transition-colors dark:text-emerald-400"
                                 title={results[0]?.domain}
                             >
@@ -252,7 +246,7 @@ export default function TimelinePanel({
                             </span>
                             <div className="inline-flex items-center gap-2">
                                 <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden dark:bg-slate-700">
-                                    <div 
+                                    <div
                                         className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all"
                                         style={{ width: `${avgConfidence}%` }}
                                     ></div>
@@ -269,8 +263,8 @@ export default function TimelinePanel({
                     <div className="flex items-start gap-2">
                         <span className="text-slate-500 mt-0.5 dark:text-slate-400">ℹ️</span>
                         <span className="dark:text-slate-200">
-                            {selectedSentence 
-                                ? "Click sentences to filter sources by origin" 
+                            {selectedSentence
+                                ? "Click sentences to filter sources by origin"
                                 : "Timeline shows information spread from origin to latest discovery"
                             }
                         </span>
