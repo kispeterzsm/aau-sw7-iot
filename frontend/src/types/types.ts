@@ -1,5 +1,3 @@
-// types/types.ts
-
 export type JobStatus = "queued" | "processing" | "completed" | "failed";
 
 export type ViewMode = "all" | "news" | "websites";
@@ -15,17 +13,16 @@ export type ResultItem = {
   type?: "news" | "website";
 };
 
-// UPDATED: Backend now returns news_results and website_results directly
 export type BackendAnalysisSection = {
   sentence: string;
   search_term: string;
-  news_results: Array<{  // CHANGED: from 'results' to 'news_results'
+  news_results: Array<{  
     url: string;
     date: string | null;
     title: string;
     snippet: string;
   }>;
-  website_results: Array<{  // ADDED: website_results array
+  website_results: Array<{  
     url: string;
     date: string | null;
     title: string;
