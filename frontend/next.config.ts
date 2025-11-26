@@ -7,11 +7,15 @@ const nextConfig = {
   output: "standalone",
   async rewrites() {
     return [
-      {
-        source: '/api/:path*',
-        destination: 'http://api:8999/:path*', 
-      },
-    ]
+    {
+      source: '/api/auth/:path*', 
+      destination: '/api/auth/:path*',
+    },
+    {
+      source: '/api/:path*',
+      destination: 'http://api:8999/:path*',
+    },
+  ]
   },
 };
 

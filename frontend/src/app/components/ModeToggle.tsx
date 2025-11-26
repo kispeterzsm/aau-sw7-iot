@@ -1,4 +1,3 @@
-// components/ModeToggle.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -16,7 +15,6 @@ export default function ModeToggle() {
         applyTheme(false);
         setIsDark(false);
       } else {
-        // use system preference if no stored value
         const prefersDark = window.matchMedia &&
           window.matchMedia("(prefers-color-scheme: dark)").matches;
         applyTheme(prefersDark);
