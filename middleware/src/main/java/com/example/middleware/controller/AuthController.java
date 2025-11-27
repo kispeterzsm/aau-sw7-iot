@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -22,13 +23,8 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity register(@RequestBody RegisterRequest request) {
-        User user = authService.register(request);
 
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("id", user.getId());
-        resp.put("email", user.getEmail());
-
-        return ResponseEntity.ok(resp);
+        return authService.register(request);
     }
 
     @PostMapping("/login")
@@ -56,4 +52,27 @@ public class AuthController {
     public List<Subscription> subscriptions(@PathVariable Long userId) {
         return authService.subscriptions(userId);
     }
+
+    @PostMapping("/mfa/email/enable")
+    public Map<String, String> enableEmailMfa(@RequestParam("user_id") Long userId,
+                                              @RequestParam("enabled") boolean enabled) {
+        authService.setEmailMfaEnabled(userId, enabled);
+        return Map.of("status", "ok");
+    }
+
+    @PostMapping("/mfa/email/request")
+    public Map<String, String> requestEmailOtp(@RequestParam("user_id") Long userId) {
+        authService.sendEmailMfaOtp(userId);
+        return Map.of("status", "otp_sent");
+    }
+
+    @PostMapping("/mfa/email/verify")
+    public ResponseEntity<Map<String, Object>> verifyEmailOtp(
+            @RequestParam("user_id") Long userId,
+            @RequestParam("code") String code) {
+
+        return authService.verifyEmailMfaOtp(userId, code);
+
+    }
+
 }

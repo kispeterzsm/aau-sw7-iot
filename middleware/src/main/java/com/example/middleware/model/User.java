@@ -29,4 +29,7 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Subscription> subscriptions;
+
+    @Column(name = "mfa_email_enabled", nullable = false)
+    private boolean mfaEmailEnabled = false;
 }
