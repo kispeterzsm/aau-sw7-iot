@@ -134,18 +134,32 @@ class NLP_Pipeline():
             processed_sentences.append({"sentence": sentence, "search_term": self.extract_answer(output[0]['generated_text'])})
         return processed_sentences
 
-    def do_the_thing(self, input, top_x:int=5, query_variations:int=1) -> List[dict]:
+    def do_the_thing(self, input, top_x:int=5, query_variations:int=1, do_ner=True) -> List[dict]:
         """
         Given an input breaks it up into sentences, then ranks these based on how important these are.
         The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
         Returns a list of these phrases. If a `newspaper.Article` class is given as input `top_x` will be ignored as this method uses `article.summary`
+        If `do_ner` is true Named Entity Recognition will be run on the entire input text and the function will return two things, the second being a list of entities
+        together with their names, labels (as given by spacy)
         """
         searchterms=None
+        entities=None
         if isinstance(input, Article):
             searchterms= self.process_article(input)
         else:
             searchterms= self.process_raw_text(input, top_x)
         
+        if do_ner:
+            if isinstance(input, Article):
+                entities = self.find_entities(input.text)
+            else:
+                entities = self.find_entities(input)
+            for s in searchterms:
+                s["entities"]=[]
+                for e in entities:
+                    if e["name"] in s["sentence"]:
+                        s["entities"].append(e)
+
         if query_variations<=1:
             return searchterms
 
@@ -157,6 +171,18 @@ class NLP_Pipeline():
                 res.append({"sentence":query["sentence"], "searchterm":var})
                 
         return res
+
+    def find_entities(self, text: str):
+        entities = []
+        labels={}
+        doc = self.nlp(text)
+        for ent in doc.ents:
+            if ent.label_ in {"PERSON", "ORG", "GPE", "EVENT", "WORK_OF_ART"}:
+                if ent.text not in entities:
+                  entities.append(ent.text)
+                  labels[ent.text]=ent.label_
+
+        return [{"name":e, "label":labels[e]} for e in entities]
 
     def query_variations(self, query: str, num_variations: int = 5) -> List[str]:
             """
