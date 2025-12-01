@@ -14,9 +14,9 @@ const handler = NextAuth({
           if (!credentials?.email || !credentials?.password) {
             return null;
           }
-
+          const backendUrl = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://web-search-service:8000";
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/login`,
+            `${backendUrl}/login`,
             {
               method: "POST",
               body: JSON.stringify({

@@ -10,7 +10,7 @@ import {
 } from "@/types/types";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8999";
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://middleware-service:8999";
 
 export async function loadTopNews(limit: number = 10): Promise<ResultItem[]> {
   try {

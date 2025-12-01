@@ -1,5 +1,4 @@
 import os
-import logging
 import json
 import asyncio
 import requests
@@ -38,7 +37,7 @@ async def lifespan(app: FastAPI):
                 MARKET_MAP = json.load(f)
             print(f"Loaded {len(MARKET_MAP)} markets.")
     except Exception as e:
-        print(f"Warning: Could not load market_map.json: {e}")
+        print(f"Warning: Could not load the market map: {e}")
 
     yield
     ml_models.clear()
@@ -125,7 +124,7 @@ async def link_all(data: Input):
         query["website_results"] = websites_without_dates
         all_dated_results.extend(results_with_dates)
 
-    oldest = await asyncio.to_thread(scraper.get_oldest_result, all_dated_results)
+    oldest = await asyncio.to_thread(scraper.get_oldest_result, results_with_dates)
     return {"warning": None, "result": queries, "oldest_result": oldest}
 
 

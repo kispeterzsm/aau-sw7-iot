@@ -1,5 +1,5 @@
 services:
-  # --- 1. Database ---
+  # --- Database ---
   db:
     image: postgres:16
     environment:
@@ -18,7 +18,7 @@ services:
     networks:
       - app-network
 
-  # --- 2. NLP Service (GPU) ---
+  # --- NLP Service ---
   nlp-service:
     build:
       context: ./nlp_module
@@ -42,7 +42,7 @@ services:
     networks:
       - app-network
 
-  # --- 3. Web Search Service (CPU) ---
+  # --- Web Search Service ---
   web-search:
     build:
       context: ./web_search
@@ -59,7 +59,7 @@ services:
     networks:
       - app-network
 
-  # --- 4. Middleware API (Java Spring Boot) ---
+  # --- Middleware API ---
   api:
     build: ./middleware
     container_name: middleware-api
@@ -100,7 +100,7 @@ services:
       api:
         condition: service_healthy
     environment:
-      - NEXT_PUBLIC_API_URL=/api
+      - NEXT_PUBLIC_API_URL=http://api:8999
     ports: 
       - "3000:3000"
     restart: unless-stopped

@@ -10,3 +10,4 @@ lxml_html_clean
 stealth-requests
 deep_translator
 langdetect
+htmldate

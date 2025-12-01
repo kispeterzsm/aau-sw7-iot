@@ -1,4 +1,4 @@
-# Credentials and Tokens
+# secrets
 apiVersion: v1
 kind: Secret
 metadata:
@@ -12,14 +12,14 @@ stringData:
   AUTH_TOKEN_NGROK: "AUTH_TOKEN_NGROK"
 
 ---
-# DB
+# db
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pg-data-pvc
 spec:
   storageClassName: manual
-  volumeName: pg-physical-volume
+  volumeName: pg-physical-volume 
   accessModes: [ "ReadWriteOnce" ]
   resources:
     requests:
@@ -42,6 +42,7 @@ spec:
       labels:
         app: db
     spec:
+      # DB must run on Master because the data folder is there
       nodeSelector:
         kubernetes.io/hostname: k8s-master
       containers:
@@ -86,7 +87,8 @@ kind: Deployment
 metadata:
   name: nlp-service
 spec:
-  replicas: 1
+  # LOAD BALANCER IMPLEMENTATION:
+  replicas: 2 
   selector:
     matchLabels:
       app: nlp-service
@@ -116,6 +118,7 @@ spec:
           limits:
             nvidia.com/gpu: 1
 ---
+# Load Balancer entrypoint
 apiVersion: v1
 kind: Service
 metadata:
@@ -134,7 +137,7 @@ kind: Deployment
 metadata:
   name: web-search
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: web-search
@@ -225,7 +228,7 @@ spec:
       targetPort: 8999
 
 ---
-# Frontend
+# frontend
 apiVersion: apps/v1
 kind: Deployment
 metadata:
