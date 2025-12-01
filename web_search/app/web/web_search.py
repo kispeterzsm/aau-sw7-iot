@@ -163,12 +163,11 @@ class WebScraping:
                 continue
 
             # Language detection
-            if detect(title)!='en':
-                original_title_text = title
-                original_snippet_text = snippet
-                translated_title, translated_snippet, original_lang = self._translate_result(original_title_text, original_snippet_text)
-                title = translated_title
-                snippet = translated_snippet
+            original_title_text = title
+            original_snippet_text = snippet
+            translated_title, translated_snippet, original_lang = self._translate_result(original_title_text, original_snippet_text)
+            title = translated_title
+            snippet = translated_snippet
 
             if date_text:
                 date = self.parse_bing_date(date_text)
@@ -241,6 +240,7 @@ class WebScraping:
         with StealthSession() as session:
             while ((len(results_with_dates) < num_results or len(websites_without_dates) < num_undated_target) 
                     and page < MAX_PAGES
+                    # timeout in case it takes too much time
                     and (time.time() - start_time <= MAX_DURATION_SEC)):
                 
                 #if time.time() - start_time > MAX_DURATION_SEC:
