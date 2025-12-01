@@ -11,6 +11,9 @@ export type ResultItem = {
   snippet: string;
   confidence: number;
   type?: "news" | "website";
+  original_title?: string;       
+  original_language?: string;    
+  is_translated?: boolean;
 };
 
 export type BackendAnalysisSection = {
@@ -21,12 +24,20 @@ export type BackendAnalysisSection = {
     date: string | null;
     title: string;
     snippet: string;
+    original_title?: string;     
+    original_language?: string;
   }>;
   website_results: Array<{  
     url: string;
     date: string | null;
     title: string;
     snippet: string;
+    original_title?: string;
+    original_language?: string;
+  }>;
+  entities?: Array<{  
+    name: string;     
+    label: string;   
   }>;
 };
 
@@ -38,7 +49,6 @@ export type AnalysisSection = {
   entities?: Array<{
     text: string;
     type: string;
-    confidence: number;
   }>;
 };
 

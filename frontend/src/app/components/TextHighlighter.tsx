@@ -25,49 +25,56 @@ export default function TextHighlighter({
         section.entities && section.entities.length > 0
     );
 
-    function highlightRealEntities(text: string, sections: AnalysisSection[]): string {
-        let entityHighlightedText = text;
+function highlightRealEntities(text: string, sections: AnalysisSection[]): string {
+  let entityHighlightedText = text;
 
-        const allEntities: Array<{ text: string, type: string, confidence: number }> = [];
-        sections.forEach(section => {
-            if (section.entities && Array.isArray(section.entities)) {
-                allEntities.push(...section.entities);
-            }
-        });
-
-        const uniqueEntities = allEntities.filter((entity, index, self) =>
-            index === self.findIndex(e =>
-                e.text.toLowerCase() === entity.text.toLowerCase() &&
-                e.type === entity.type
-            )
-        );
-
-        uniqueEntities.forEach(entity => {
-            const entityClass = getEntityClass(entity.type);
-            const escapedEntityText = entity.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`\\b${escapedEntityText}\\b`, 'gi');
-
-            entityHighlightedText = entityHighlightedText.replace(
-                regex,
-                `<span class="${entityClass} px-1 py-0.5 rounded border mx-0.5 cursor-help" title="${entity.type} (${Math.round(entity.confidence * 100)}% confidence)">$&</span>`
-            );
-        });
-
-        return entityHighlightedText;
+  const allEntities: Array<{ text: string, type: string }> = [];
+  sections.forEach(section => {
+    if (section.entities && Array.isArray(section.entities)) {
+      allEntities.push(...section.entities);
     }
+  });
 
-    function getEntityClass(type: string): string {
-        const classes = {
-            PERSON: 'bg-red-200 dark:bg-red-800 border-red-400 dark:border-red-600 text-red-900 dark:text-red-100',
-            ORGANIZATION: 'bg-green-200 dark:bg-green-800 border-green-400 dark:border-green-600 text-green-900 dark:text-green-100',
-            LOCATION: 'bg-blue-200 dark:bg-blue-800 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100',
-            DATE: 'bg-yellow-200 dark:bg-yellow-800 border-yellow-400 dark:border-yellow-600 text-yellow-900 dark:text-yellow-100',
-            LAW: 'bg-purple-200 dark:bg-purple-800 border-purple-400 dark:border-purple-600 text-purple-900 dark:text-purple-100',
-            EVENT: 'bg-pink-200 dark:bg-pink-800 border-pink-400 dark:border-pink-600 text-pink-900 dark:text-pink-100'
-        };
+  const uniqueEntities = allEntities.filter((entity, index, self) =>
+    index === self.findIndex(e =>
+      e.text.toLowerCase() === entity.text.toLowerCase() &&
+      e.type === entity.type
+    )
+  );
 
-        return classes[type as keyof typeof classes] || 'bg-gray-200 dark:bg-gray-800 border-gray-400 text-gray-900 dark:text-gray-100';
-    }
+  uniqueEntities.forEach(entity => {
+    const entityClass = getEntityClass(entity.type);
+    const escapedEntityText = entity.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escapedEntityText}\\b`, 'gi');
+
+    entityHighlightedText = entityHighlightedText.replace(
+      regex,
+      `<span class="${entityClass} px-1 py-0.5 rounded border mx-0.5 cursor-help" title="${entity.type}">$&</span>`
+    );
+  });
+
+  return entityHighlightedText;
+}
+
+function getEntityClass(type: string): string {
+  const classes = {
+    // SpaCy entity types from your teammate
+    PERSON: 'bg-red-200 dark:bg-red-800 border-red-400 dark:border-red-600 text-red-900 dark:text-red-100',
+    ORG: 'bg-green-200 dark:bg-green-800 border-green-400 dark:border-green-600 text-green-900 dark:text-green-100',
+    GPE: 'bg-blue-200 dark:bg-blue-800 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100',
+    EVENT: 'bg-pink-200 dark:bg-pink-800 border-pink-400 dark:border-pink-600 text-pink-900 dark:text-pink-100',
+    WORK_OF_ART: 'bg-purple-200 dark:bg-purple-800 border-purple-400 dark:border-purple-600 text-purple-900 dark:text-purple-100',
+    
+    // Keep old types for backward compatibility
+    ORGANIZATION: 'bg-green-200 dark:bg-green-800 border-green-400 dark:border-green-600 text-green-900 dark:text-green-100',
+    LOCATION: 'bg-blue-200 dark:bg-blue-800 border-blue-400 dark:border-blue-600 text-blue-900 dark:text-blue-100',
+    DATE: 'bg-yellow-200 dark:bg-yellow-800 border-yellow-400 dark:border-yellow-600 text-yellow-900 dark:text-yellow-100',
+    LAW: 'bg-purple-200 dark:bg-purple-800 border-purple-400 dark:border-purple-600 text-purple-900 dark:text-purple-100',
+  };
+
+  return classes[type as keyof typeof classes] || 'bg-gray-200 dark:bg-gray-800 border-gray-400 text-gray-900 dark:text-gray-100';
+}
+
 
     function highlightText(text: string) {
         let highlightedText = text;
@@ -188,15 +195,16 @@ export default function TextHighlighter({
                             </div>
 
                             {/* Entities - Conditionally shown */}
-                            {hasEntities && (
-                                <div className="flex items-start gap-3">
-                                    <div className="w-6 h-6 bg-red-200 dark:bg-red-800 border border-red-400 dark:border-red-600 rounded flex-shrink-0 mt-0.5"></div>
-                                    <div>
-                                        <div className="text-xs font-semibold text-slate-200">People/Places</div>
-                                        <div className="text-xs text-slate-400 mt-0.5">Named entities detected</div>
-                                    </div>
-                                </div>
-                            )}
+                              {hasEntities && (
+    <div className="flex items-start gap-3">
+      <div className="w-6 h-6 bg-red-200 dark:bg-red-800 border border-red-400 dark:border-red-600 rounded flex-shrink-0 mt-0.5"></div>
+      <div>
+        <div className="text-xs font-semibold text-slate-200">Named Entities</div>
+        <div className="text-xs text-slate-400 mt-0.5">People, organizations, locations</div>
+      </div>
+    </div>
+  )}
+
                         </div>
 
 

@@ -189,6 +189,20 @@ export default function ResultsList({
                                         })}</span>
                                         <span className="text-slate-400 dark:text-slate-500">•</span>
                                         <span className="font-mono">{Math.max(1, Math.floor((Date.now() - new Date(r.published).getTime()) / (1000 * 60 * 60 * 24)))} days ago</span>
+                                        {/* Language Badge */}
+  {r.original_language && (
+    <>
+      <span className="text-slate-400 dark:text-slate-500">•</span>
+      <span 
+        className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded text-xs font-medium border border-amber-300 dark:border-amber-700 cursor-help"
+        title={`Translated from ${r.original_language.toUpperCase()}${
+          r.original_title ? `: "${r.original_title}"` : ''
+        }`}
+      >
+        🌐 {r.original_language.toUpperCase()}
+      </span>
+    </>
+  )}
 
                                         {/* Type Badge */}
                                         {r.type && (
@@ -315,7 +329,7 @@ export default function ResultsList({
                 <div className="mt-6 pt-5 border-t border-slate-200/50 dark:border-slate-700/50 text-center">
                     <div className="mb-3">
                         <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
-                            🔍 Want to see all {results.length} sources and advanced features?
+                            🔍 Want to see all sources and advanced features?
                         </p>
                         <p className="text-xs text-slate-600 dark:text-slate-400">
                             Unlock complete access to our Forensic Analysis Engine

@@ -104,7 +104,10 @@ export default function SearchPanel({
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
                                 <span className="text-sm font-semibold">Trace</span>
+
                             </>
+                            
+                            
                         )}
                     </button>
 
