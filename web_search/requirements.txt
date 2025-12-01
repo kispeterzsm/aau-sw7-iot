@@ -11,3 +11,4 @@ stealth-requests
 deep_translator
 langdetect
 htmldate
+datefinder
