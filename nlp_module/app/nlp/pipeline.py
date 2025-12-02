@@ -64,46 +64,6 @@ class NLP_Pipeline():
         doc = self.nlp(text)
         return [sent.text.strip() for sent in doc.sents]
 
-    def rank_sentences(self, sentences: List[str], top_x: int = 5) -> List[Dict]:
-        """
-        Ranks sentences by an importance score based on Named Entity Recognition (NER).
-
-        Args:
-            sentences (List[str]): List of sentences to analyze.
-            top_x (int): Number of top sentences to return.
-
-        Returns:
-            JSON style list of top X sentences with their importance scores.
-        """
-
-        scored_sentences = []
-
-        for sentence in sentences:
-            doc = self.nlp(sentence)
-            score = 0
-
-            # Count entities with different weights (tweakable)
-            for ent in doc.ents:
-                if ent.label_ in {"PERSON"}:
-                    score += 3
-                elif ent.label_ in {"ORG", "GPE"}:  # Organizations, Countries, Cities
-                    score += 2
-                elif ent.label_ in {"DATE", "TIME"}:
-                    score += 2
-                elif ent.label_ in {"CARDINAL", "QUANTITY", "MONEY", "PERCENT"}:
-                    score += 1
-                else:
-                    score += 0.5  # catch-all for other entities
-
-            scored_sentences.append({
-                "sentence":sentence,
-                "importance":score
-            })
-
-        # Sort sentences by score (descending) and return top X
-        scored_sentences.sort(key=lambda x: x["importance"], reverse=True)
-        return scored_sentences[:top_x]
-
     def extract_answer(self, sentence:str) -> List[str]:
         """
         Extracts the desired answer part of a text given by an LLM.
@@ -117,13 +77,18 @@ class NLP_Pipeline():
         The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
         Returns a list of these phrases.
         """
-        sentences = self.split_into_sentences(input_text)
-        importants = self.rank_sentences(sentences, top_x)
+
+        article = Article("")
+        article.set_html(input_text)
+        article.parse()
+        article.set_text(input_text)
+        article.set_title("Title")
+        article = nlp_article(article)
+        importants = self.split_into_sentences(article.summary)
         for sentence in importants:
             output=self.llm.prompt(self.llm_prompt.format(sentence=sentence["sentence"]), stop_sequence="Input:")
             sentence["search_term"]=self.extract_answer(output[0]['generated_text'])
         return importants
-
 
     def process_article(self, article:Article) -> List[dict]:
         article = nlp_article(article)
