@@ -67,7 +67,8 @@ class NLP_Pipeline():
         """
         Extracts the desired answer part of a text given by an LLM.
         """
-        return sentence.split("\n")[-2].strip()
+        res = sentence.split("\n")[-2].strip()
+        return res if "Input" not in res else sentence.split("\n")[-3].strip()
         
 
     def process_raw_text(self,input_text:str, top_x:int = 5) -> List[dict]:
