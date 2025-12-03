@@ -9,7 +9,7 @@ from newspaper import Article
 from typing import List, Tuple, Dict
 
 class Local_LLM():
-    def __init__(self, model="google/gemma-3-4b-it", device="cuda", task="text-generation"):
+    def __init__(self, model="Qwen/Qwen3-4B-Instruct-2507", device="cuda", task="text-generation"):
         self.pipeline = pipeline(
             task=task,
             model=model,
