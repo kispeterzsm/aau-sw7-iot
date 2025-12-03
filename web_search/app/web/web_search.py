@@ -16,7 +16,14 @@ class WebScraping:
 
     def __init__(self):
         self.log = logging.getLogger("WebScraping Class")
-        logging.basicConfig(level=logging.DEBUG        )
+        logging.basicConfig(level=logging.DEBUG)
+        self.interrupt = False
+        
+    def interrupt_search(self):
+        """
+        User can manually interrupt the search
+        """
+        self.interrupt = True
 
     def _translate_result(self, title: str, snippet: str) -> Tuple[str, str, Optional[str]]:
         """
@@ -52,7 +59,7 @@ class WebScraping:
         if market:
             url += f"&mkt={market}"
         return url
-
+        
     @staticmethod
     def parse_bing_date(text: str) -> Optional[datetime]:
         """
@@ -231,6 +238,9 @@ class WebScraping:
         MAX_PAGES = 100
         MAX_DURATION_SEC = 90
         start_time = time.time()
+        
+        # Reset the interrupt
+        self.interrupt = False
 
         if market is None:
             self.log.warning(f"Language detection failed for '{query}', defaulting to US market.")
@@ -246,6 +256,11 @@ class WebScraping:
                 #if time.time() - start_time > MAX_DURATION_SEC:
                 #    self.log.warning(f"Search timed out after {MAX_DURATION_SEC} seconds. Returning partial results.")
                 #    break
+                
+                # User interrupts search
+                if self.interrupt: 
+                    self.log.info('Search interrupted by user')
+                    break
 
                 first = page * per_page + 1
                 url = self.build_bing_search_url(query, first, market=final_market)
