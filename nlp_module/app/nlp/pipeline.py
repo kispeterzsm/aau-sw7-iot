@@ -49,32 +49,6 @@ class NLP_Pipeline():
         doc = self.nlp(text)
         return [sent.text.strip() for sent in doc.sents]
 
-    def rank_sentences(self, sentences: List[str], top_x: int = 5) -> List[Dict]:
-        """Ranks sentences by an importance score based on Named Entity Recognition (NER)."""
-        scored_sentences = []
-
-        for sentence in sentences:
-            doc = self.nlp(sentence)
-            score = 0
-            for ent in doc.ents:
-                if ent.label_ in {"PERSON"}:
-                    score += 3
-                elif ent.label_ in {"ORG", "GPE"}:
-                    score += 2
-                elif ent.label_ in {"DATE", "TIME"}:
-                    score += 2
-                elif ent.label_ in {"CARDINAL", "QUANTITY", "MONEY", "PERCENT"}:
-                    score += 1
-                else:
-                    score += 0.5 
-
-            scored_sentences.append({
-                "sentence":sentence,
-                "importance":score
-            })
-
-        scored_sentences.sort(key=lambda x: x["importance"], reverse=True)
-        return scored_sentences[:top_x]
 
     def generate_search_term(self, sentence: str) -> str:
         messages = [
@@ -131,12 +105,22 @@ class NLP_Pipeline():
         generated_text = outputs[0]['generated_text']
         answer = generated_text[len(prompt):].strip()
         
-        return answer
+        return answer        
 
-    def process_raw_text(self, input_text:str, top_x:int = 5) -> List[dict]:
-        sentences = self.split_into_sentences(input_text)
-        importants = self.rank_sentences(sentences, top_x)
-        
+    def process_raw_text(self,input_text:str, top_x:int = 5) -> List[dict]:
+        """
+        Given an input text, breaks it up into sentences, then ranks these based on how important these are.
+        The top_x most important sentences will then be passed to an LLM that transforms them into a websearch style phrase.
+        Returns a list of these phrases.
+        """
+        article = Article("")
+        article.set_html(input_text)
+        article.parse()
+        article.set_text(input_text)
+        article.set_title("Title")
+        article = nlp_article(article)
+        importants = self.split_into_sentences(article.summary)
+
         for sentence in importants:
             sentence["search_term"] = self.generate_search_term(sentence["sentence"])
             
