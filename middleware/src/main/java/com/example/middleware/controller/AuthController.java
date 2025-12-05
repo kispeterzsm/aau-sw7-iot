@@ -1,6 +1,8 @@
 package com.example.middleware.controller;
 
+import com.example.middleware.dto.ChangePasswordRequest;
 import com.example.middleware.dto.RegisterRequest;
+import com.example.middleware.dto.ResetPasswordRequest;
 import com.example.middleware.model.Subscription;
 import com.example.middleware.model.User;
 import com.example.middleware.service.AuthService;
@@ -8,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -20,6 +23,7 @@ public class AuthController {
 
     private final AuthService authService;
 
+
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity register(@RequestBody RegisterRequest request) {
@@ -29,13 +33,10 @@ public class AuthController {
 
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
-    public Map<String, Object> login(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> login(@RequestBody RegisterRequest request) {
         try {
-            User user = authService.login(request);
-            Map<String, Object> resp = new HashMap<>();
-            resp.put("id", user.getId());
-            resp.put("email", user.getEmail());
-            return resp;
+
+            return authService.login(request);
         } catch (RuntimeException e) {
             throw new RuntimeException("invalid login");
         }
@@ -73,6 +74,24 @@ public class AuthController {
 
         return authService.verifyEmailMfaOtp(userId, code);
 
+    }
+
+    @PostMapping("/password/change")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
+        return authService.changePassword(request);
+    }
+
+    @PostMapping("/password/forgot")
+    public Map<String, String> forgotPassword(@RequestParam("email") String email) {
+        authService.sendPasswordResetOtp(email);
+        return Map.of("status", "otp_sent");
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<Map<String, Object>> resetPassword(
+            @RequestBody ResetPasswordRequest request
+    ) {
+        return authService.resetPasswordWithOtp(request);
     }
 
 }
