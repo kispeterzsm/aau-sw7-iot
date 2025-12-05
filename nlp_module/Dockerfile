@@ -1,5 +1,5 @@
 # FROM the llm base image
-FROM local/llm-base:v1
+FROM jimpoz/llm-base:v1
 
 WORKDIR /app
 
@@ -12,4 +12,4 @@ COPY app/ .
 EXPOSE 8080
 
 ENV PYTHONPATH=/app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

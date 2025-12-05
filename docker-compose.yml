@@ -30,7 +30,7 @@ services:
       - "8080:8080"
     environment:
       - HF_TOKEN=${HF_TOKEN}
-      - MODEL_NAME=google/gemma-3-4b-it
+      - MODEL_NAME=Qwen/Qwen3-4B-Instruct-2507
     restart: unless-stopped
     deploy:
       resources:
