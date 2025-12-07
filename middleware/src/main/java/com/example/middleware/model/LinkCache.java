@@ -5,8 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.Type;
-import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
 
 import java.time.OffsetDateTime;
 
@@ -32,7 +30,6 @@ public class LinkCache {
 
     private Integer searchDepth;
 
-    @Type(JsonBinaryType.class)
     @Column(columnDefinition = "jsonb", nullable = false)
     private String response;
 
