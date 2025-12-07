@@ -5,80 +5,11 @@ metadata:
   name: app-secrets
 type: Opaque
 stringData:
-  POSTGRES_USER: "iot_zay4_user"
-  POSTGRES_PASSWORD: "POSTGRES_PASSWORD"
-  POSTGRES_DB: "iot_zay4"
-  HF_TOKEN: "HF_TOKEN"
-  AUTH_TOKEN_NGROK: "AUTH_TOKEN_NGROK"
-
----
-# db
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: pg-data-pvc
-spec:
-  storageClassName: manual
-  volumeName: pg-physical-volume 
-  accessModes: [ "ReadWriteOnce" ]
-  resources:
-    requests:
-      storage: 5Gi
-  selector:
-    matchLabels:
-      type: local
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: db
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: db
-  template:
-    metadata:
-      labels:
-        app: db
-    spec:
-      # DB must run on Master because the data folder is there
-      nodeSelector:
-        kubernetes.io/hostname: k8s-master
-      containers:
-      - name: postgres
-        image: postgres:16
-        env:
-        - name: POSTGRES_DB
-          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_DB } }
-        - name: POSTGRES_USER
-          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_USER } }
-        - name: POSTGRES_PASSWORD
-          valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_PASSWORD } }
-        ports: [ { containerPort: 5432 } ]
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: pg-storage
-        livenessProbe:
-          exec:
-            command: ["pg_isready", "-U", "iot_zay4_user", "-d", "iot_zay4"]
-          initialDelaySeconds: 10
-          periodSeconds: 5
-      volumes:
-      - name: pg-storage
-        persistentVolumeClaim:
-          claimName: pg-data-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: db-service
-spec:
-  selector:
-    app: db
-  ports:
-    - port: 5432
-      targetPort: 5432
+  POSTGRES_USER: "neondb_owner"
+  POSTGRES_PASSWORD: ""
+  POSTGRES_DB: "neondb"
+  HF_TOKEN: "" 
+  AUTH_TOKEN_NGROK: ""
 
 ---
 # NLP Service
@@ -87,8 +18,7 @@ kind: Deployment
 metadata:
   name: nlp-service
 spec:
-  # LOAD BALANCER IMPLEMENTATION:
-  replicas: 2 
+  replicas: 1
   selector:
     matchLabels:
       app: nlp-service
@@ -113,7 +43,9 @@ spec:
         - name: HF_TOKEN
           valueFrom: { secretKeyRef: { name: app-secrets, key: HF_TOKEN } }
         - name: MODEL_NAME
-          value: "google/gemma-3-4b-it"
+          value: "Qwen/Qwen3-4B-Instruct-2507"
+        - name: HF_HOME 
+          value: "/app/model_cache"
         resources:
           limits:
             nvidia.com/gpu: 1
@@ -129,7 +61,6 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
-
 ---
 # Web Search
 apiVersion: apps/v1
@@ -167,9 +98,9 @@ spec:
   ports:
     - port: 8000
       targetPort: 8000
-
 ---
 # Middleware
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -184,16 +115,36 @@ spec:
       labels:
         app: middleware-api
     spec:
+      initContainers:
+      - name: download-otel-agent
+        image: busybox:latest
+        command: ['sh', '-c', 'wget -O /otel/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar']
+        volumeMounts:
+        - name: otel-agent-volume
+          mountPath: /otel
       containers:
       - name: api
         image: jimpoz/aau-sw7-iot-api:latest
         imagePullPolicy: Always
         ports: [ { containerPort: 8999 } ]
+        
+        volumeMounts:
+        - name: otel-agent-volume
+          mountPath: /otel
+          
         env:
+        - name: OTEL_SERVICE_NAME
+          value: "iot-middleware-api"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: ""
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "grpc" 
+        - name: JAVA_TOOL_OPTIONS
+          value: "-javaagent:/otel/opentelemetry-javaagent.jar"
         - name: SERVER_PORT
           value: "8999"
         - name: SPRING_DATASOURCE_URL
-          value: "jdbc:postgresql://db-service:5432/iot_zay4"
+          value: ""
         - name: SPRING_DATASOURCE_USERNAME
           valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_USER } }
         - name: SPRING_DATASOURCE_PASSWORD
@@ -215,6 +166,9 @@ spec:
             command: ["curl", "-f", "http://localhost:8999/health"]
           initialDelaySeconds: 30
           periodSeconds: 10
+      volumes:
+      - name: otel-agent-volume
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -226,7 +180,6 @@ spec:
   ports:
     - port: 8999
       targetPort: 8999
-
 ---
 # frontend
 apiVersion: apps/v1
@@ -253,6 +206,8 @@ spec:
           value: "/api"
         - name: INTERNAL_API_URL
           value: "http://middleware-service:8999"
+        - name: NEXT_PUBLIC_BASE_URL
+          value: "https://your-ngrok-url.ngrok-free.app"
 ---
 apiVersion: v1
 kind: Service
@@ -266,3 +221,48 @@ spec:
     - port: 3000
       targetPort: 3000
       nodePort: 30000
+---
+# Postgres Local (fault tolerant and redundant)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-local
+spec:
+  serviceName: "postgres-local-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-local
+  template:
+    metadata:
+      labels:
+        app: postgres-local
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              value: "jimpo" 
+            - name: POSTGRES_DB
+              value: "iot-sw7-postgres-local"
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: pg-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-local-service
+spec:
+  selector:
+    app: postgres-local
+  ports:
+    - port: 5432
+      targetPort: 5432

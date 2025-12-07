@@ -119,12 +119,16 @@ class NLP_Pipeline():
         article.set_text(input_text)
         article.set_title("Title")
         article = nlp_article(article)
-        importants = self.split_into_sentences(article.summary)
-
-        for sentence in importants:
-            sentence["search_term"] = self.generate_search_term(sentence["sentence"])
+        sentences = self.split_into_sentences(article.summary)
+        
+        processed_sentences = [] 
+        
+        for sentence_text in sentences:
+            sentence_dict = {"sentence": sentence_text}
+            sentence_dict["search_term"] = self.generate_search_term(sentence_text)
+            processed_sentences.append(sentence_dict)
             
-        return importants
+        return processed_sentences
 
     def process_article(self, article:Article) -> List[dict]:
         article = nlp_article(article)
