@@ -7,10 +7,47 @@ import TimelinePanel from "./components/TimelinePanel";
 import { ResultItem, JobStatus, AnalysisSection, ViewMode } from "@/types/types";
 import Navbar from "./components/Navbar";
 import TextHighlighter from "./components/TextHighlighter";
-import { loadTopNews, analyzeURL, analyzeText } from "./actions/actions";
+import { loadTopNews, analyzeURL, analyzeText, getUserHistory, addToUserHistory } from "./actions/actions";
 import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import HistoryPanel from "./components/HistoryPanel";
 
+
+const GUEST_HISTORY_KEY = "iot_guest_history_v1";
+
+const getGuestHistory = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const item = localStorage.getItem(GUEST_HISTORY_KEY);
+    return item ? JSON.parse(item) : [];
+  } catch { return []; }
+};
+
+const saveToGuestHistory = (url: string) => {
+  if (typeof window === 'undefined') return;
+  const current = getGuestHistory();
+  const existingIndex = current.findIndex((h: any) => h.url === url);
+
+  const newItem = {
+    id: Date.now(),
+    user_id: 0,
+    cache_id: 0,
+    url: url,
+    view_count: existingIndex > -1 ? current[existingIndex].view_count + 1 : 1,
+    created_at: new Date().toISOString()
+  };
+
+  let updated;
+  if (existingIndex > -1) {
+    updated = [...current];
+    updated[existingIndex] = newItem;
+  } else {
+    updated = [newItem, ...current];
+  }
+
+  localStorage.setItem(GUEST_HISTORY_KEY, JSON.stringify(updated.slice(0, 50)));
+  return updated;
+};
 export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
@@ -25,6 +62,8 @@ export default function Page() {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [selectedSentence, setSelectedSentence] = useState<string | null>(null);
   const [originalContent, setOriginalContent] = useState<string>("");
+  const [userHistory, setUserHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const subscriptionRef = useRef<number | null>(null);
   const { data: session } = useSession();
@@ -33,7 +72,12 @@ export default function Page() {
   useEffect(() => {
     setMounted(true);
     handleLoadTopNews();
-  }, []);
+    if (session?.user?.id) {
+      loadUserHistory(session.user.id);
+    } else {
+      setUserHistory(getGuestHistory());
+    }
+  }, [session]);
 
   async function handleLoadTopNews(limit: number = 10) {
     try {
@@ -42,6 +86,15 @@ export default function Page() {
     } catch (err) {
       console.error('Error loading top news:', err);
       // Fallback
+    }
+  }
+
+  async function loadUserHistory(userId: string) {
+    try {
+      const history = await getUserHistory(userId);
+      setUserHistory(history);
+    } catch (error) {
+      console.error('Error loading user history:', error);
     }
   }
 
@@ -83,6 +136,19 @@ export default function Page() {
 
       const jobId = `job_${Date.now()}`;
       setJobId(jobId);
+
+      // HISTORY SAVING LOGIC
+      if (isURL) {
+        if (session?.user?.id) {
+          addToUserHistory(session.user.id, trimmed).then(() => {
+            loadUserHistory(session.user.id); // Refresh list
+          });
+        } else {
+          // Guest User -> Local Storage
+          const updatedGuestHistory = saveToGuestHistory(trimmed);
+          if (updatedGuestHistory) setUserHistory(updatedGuestHistory);
+        }
+      }
 
       const handle = simulateProgress((progress, status) => {
         setStatus(status);
@@ -159,7 +225,7 @@ export default function Page() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white text-slate-900 transition-colors duration-300 antialiased dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
-      <Navbar />
+      <Navbar onShowHistory={() => setShowHistory(true)} />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Gradient Orbs */}
@@ -240,17 +306,6 @@ export default function Page() {
           </aside>
         </div>
 
-        {!isSearching && filteredResults.length === 0 && (
-          <div className="mt-16 text-center">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-200/20 mb-4 dark:border-emerald-500/20">
-              <span className="text-5xl">🔍</span>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-700 mb-2 dark:text-slate-300">No Results Yet</h3>
-            <p className="text-slate-600 max-w-md mx-auto dark:text-slate-400">
-              Enter a claim or URL in the search panel to begin tracing its information origins across the web.
-            </p>
-          </div>
-        )}
       </section>
 
       {analysisSections.length > 0 && originalContent && (
@@ -265,6 +320,16 @@ export default function Page() {
           }}
         />
       )}
+      <HistoryPanel
+        history={userHistory}
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        onSelectHistory={(url) => {
+          setInput(url);
+          setShowHistory(false);
+          handleSearch();
+        }}
+      />
 
       <footer className="relative z-10 py-10 border-t border-slate-200/30 dark:border-slate-700/30">
         <div className="text-center text-xs text-slate-600 dark:text-slate-400">

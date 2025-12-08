@@ -31,7 +31,8 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
     password: false,
     name: false,
   });
-
+  const [showMfaInput, setShowMfaInput] = React.useState(false);
+  const [otp, setOtp] = React.useState("");
   const router = useRouter();
 
   const validateForm = () => {
@@ -71,32 +72,44 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
   // Client-side sign in
   const onSubmitSignIn = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    setTouched({ email: true, password: true, name: true });
 
-    if (!validateForm()) return;
+    if (!showMfaInput) {
+      setTouched({ email: true, password: true, name: true });
+      if (!validateForm()) return;
+    }
 
     setIsLoading(true);
 
     try {
-      const result = await signIn("credentials", {
+      const signInData: any = {
         email,
         password,
         redirect: false,
-      });
+      };
+
+      if (showMfaInput) {
+        signInData.otp = otp;
+      }
+
+      const result = await signIn("credentials", signInData);
 
       if (result?.error) {
-        const errorMessage = result.error;
-
-        if (errorMessage.includes(" - ")) {
-          const [title, description] = errorMessage.split(" - ");
-          toast.error(title, {
-            description: description,
+        if (result.error === "MFA_REQUIRED") {
+          setShowMfaInput(true);
+          toast.message("Two-Factor Authentication", {
+            description: "Please enter the code sent to your email."
           });
-        } else {
-          toast.error("Sign in failed", {
-            description: errorMessage,
-          });
+          setIsLoading(false);
+          return;
         }
+
+        const errorMessage = result.error;
+        toast.error("Sign in failed", {
+          description: errorMessage,
+        });
+
+        if (showMfaInput) setOtp("");
+
       } else {
         toast.success("Welcome back!", {
           description: "You have been successfully signed in.",
@@ -137,8 +150,8 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
         });
 
         if (signInResult?.error) {
-          toast.warning("Account created", {
-            description: "Your account was created successfully. Please sign in to continue.",
+          toast.warning("Login failed", {
+            description: signInResult.error,
           });
           setIsSignInMode(true);
         } else {
@@ -149,13 +162,13 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
         }
       } else {
         toast.error("Registration failed", {
-          description: result.error || "Unable to create account. Please try again.",
+          description: result.error,
         });
       }
     } catch (error: any) {
       console.error("Registration error:", error);
       toast.error("Registration failed", {
-        description: error.message || "Unable to create account. Please try again.",
+        description: error.message || "Unable to create account.",
       });
     } finally {
       setIsLoading(false);
@@ -301,79 +314,111 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   Sign in to continue tracing information origins
                 </p>
               </div>
+              {!showMfaInput ? (
+                /* STANDARD LOGIN INPUTS */
+                <>
+                  <div className="w-full mb-4">
+                    <label className="sr-only">Email</label>
+                    <input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={() => handleBlur("email")}
+                      type="email"
+                      required
+                      className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${errors.email
+                        ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
+                        : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
+                        }`}
+                      placeholder="you@company.com"
+                      aria-label="Email"
+                    />
+                    {errors.email && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.email}</p>
+                    )}
+                  </div>
 
-              <div className="w-full mb-4">
-                <label className="sr-only">Email</label>
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onBlur={() => handleBlur("email")}
-                  type="email"
-                  required
-                  className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all ${errors.email
-                    ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
-                    : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
-                    }`}
-                  placeholder="you@company.com"
-                  aria-label="Email"
-                />
-                {errors.email && (
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.email}</p>
-                )}
-              </div>
+                  <div className="w-full mb-4">
+                    <label className="sr-only">Password</label>
+                    <div className="relative">
+                      <input
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onBlur={() => handleBlur("password")}
+                        type={showPassword ? "text" : "password"}
+                        required
+                        className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all pr-10 ${errors.password
+                          ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
+                          : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
+                          }`}
+                        placeholder="••••••••"
+                        aria-label="Password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-700 transition-colors"
+                      >
+                        {showPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.password}</p>
+                    )}
+                  </div>
 
-              <div className="w-full mb-4">
-                <label className="sr-only">Password</label>
-                <div className="relative">
+                  <div className="w-full flex items-center justify-between mb-6 text-sm">
+                    <label className="inline-flex items-center gap-2 text-slate-700 dark:text-slate-400 cursor-pointer hover:text-slate-800 dark:hover:text-slate-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-slate-300 bg-white cursor-pointer accent-emerald-500 dark:border-slate-400 dark:bg-white dark:accent-emerald-600"
+                      />
+                      <span>Remember me</span>
+                    </label>
+                    <a href="/forgot-password" className="text-emerald-600 dark:text-emerald-600 hover:text-emerald-500 dark:hover:text-emerald-700 transition-colors">
+                      Forgot password?
+                    </a>
+                  </div>
+                </>) : (/* MFA OTP INPUT */
+                <div className="w-full mb-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div className="text-center mb-6">
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                      Enter the code sent to <span className="font-semibold text-emerald-600">{email}</span>
+                    </div>
+                  </div>
+
+                  <label className="sr-only">One-Time Password</label>
                   <input
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onBlur={() => handleBlur("password")}
-                    type={showPassword ? "text" : "password"}
-                    required
-                    className={`w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 placeholder-slate-400 dark:bg-white/50 dark:text-slate-900 dark:placeholder-slate-400 focus:ring-2 focus:outline-none text-sm shadow-sm transition-all pr-10 ${errors.password
-                      ? "border-red-300 focus:border-red-400 focus:ring-red-400/50 dark:border-red-400"
-                      : "border-slate-200 dark:border-slate-300/50 focus:border-emerald-400 dark:focus:border-emerald-600 focus:ring-emerald-400/50 dark:focus:ring-emerald-600/50"
-                      }`}
-                    placeholder="••••••••"
-                    aria-label="Password"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    type="text"
+                    autoFocus
+                    placeholder="123456"
+                    className="w-full px-4 py-3 rounded-xl border bg-slate-50 text-slate-900 text-center text-lg tracking-widest font-mono focus:ring-2 focus:border-emerald-500 focus:outline-none transition-all dark:bg-slate-800 dark:text-white dark:border-slate-700"
                   />
+
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-700 transition-colors"
+                    onClick={() => setShowMfaInput(false)}
+                    className="text-xs text-slate-500 mt-4 hover:text-slate-800 dark:hover:text-slate-300 underline"
                   >
-                    {showPassword ? "Hide" : "Show"}
+                    Back to login
                   </button>
                 </div>
-                {errors.password && (
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.password}</p>
-                )}
-              </div>
-
-              <div className="w-full flex items-center justify-between mb-6 text-sm">
-                <label className="inline-flex items-center gap-2 text-slate-700 dark:text-slate-400 cursor-pointer hover:text-slate-800 dark:hover:text-slate-700 transition-colors">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-slate-300 bg-white cursor-pointer accent-emerald-500 dark:border-slate-400 dark:bg-white dark:accent-emerald-600"
-                  />
-                  <span>Remember me</span>
-                </label>
-                <a href="#" className="text-emerald-600 dark:text-emerald-600 hover:text-emerald-500 dark:hover:text-emerald-700 transition-colors">
-                  Forgot password?
-                </a>
-              </div>
+              )}
 
               <button
                 type="submit"
                 disabled={isLoading}
                 className="w-full cursor-pointer rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-600 dark:to-cyan-600 text-white py-3 font-semibold tracking-wide shadow-lg hover:shadow-emerald-500/50 dark:hover:shadow-emerald-600/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Signing In..." : "Sign In"}
+                {isLoading
+                  ? "Processing..."
+                  : showMfaInput ? "Verify & Login" : "Sign In"
+                }
               </button>
 
               <div className="mt-6 text-sm text-slate-700 dark:text-slate-400">
-                <span>Don't have an account?{" "}</span>
+                <span>Don't have an account? </span>
                 <button
                   type="button"
                   onClick={() => switchMode(false)}

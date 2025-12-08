@@ -8,6 +8,7 @@ const handler = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        otp: { label: "OTP", type: "text" },
       },
       async authorize(credentials) {
         try {
@@ -27,56 +28,78 @@ const handler = NextAuth({
             }
           );
 
-          if (res.status === 404) {
-            return Promise.reject(
-              new Error("User not found - No account exists with this email")
-            );
-          } else if (res.status === 401) {
-            return Promise.reject(
-              new Error(
-                "Invalid credentials - The email or password you entered is incorrect"
-              )
-            );
-          } else if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            return Promise.reject(
-              new Error(errorData.message || "Login failed - Please try again")
-            );
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.message || "Authentication failed");
           }
 
-          const user = await res.json();
+          if (data && data.user && data.user.mfa_email_enabled) {
+            if (credentials.otp) {
+              const verifyRes = await fetch(
+                `${backendUrl}/mfa/email/verify?user_id=${data.user.id}&code=${credentials.otp}`,
+                {
+                  method: "POST",
+                }
+              );
 
-          if (user) {
+              if (!verifyRes.ok) {
+                throw new Error("Invalid OTP code");
+              }
+
+              return {
+                id: data.user.id?.toString(),
+                email: data.user.email,
+                mfa_email_enabled: true,
+              };
+            } else {
+              await fetch(
+                `${backendUrl}/mfa/email/request?user_id=${data.user.id}`,
+                {
+                  method: "POST",
+                }
+              );
+
+              throw new Error("MFA_REQUIRED");
+            }
+          }
+
+          if (data && data.user) {
             return {
-              id: user.id?.toString() || user.email,
-              email: user.email,
+              id: data.user.id?.toString(),
+              email: data.user.email,
+              mfa_email_enabled: false,
             };
           }
+
           return null;
         } catch (error: any) {
           console.error("Auth error:", error);
-          return Promise.reject(
-            new Error(
-              error.message || "Authentication failed - Please try again"
-            )
-          );
+          throw new Error(error.message);
         }
       },
     }),
   ],
+
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.mfa_email_enabled = user.mfa_email_enabled;
+      }
+      if (trigger === "update" && session?.mfa_email_enabled !== undefined) {
+        token.mfa_email_enabled = session.mfa_email_enabled;
       }
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
+        session.user.mfa_email_enabled = token.mfa_email_enabled as boolean;
       }
       return session;
     },
@@ -84,10 +107,6 @@ const handler = NextAuth({
   pages: {
     signIn: "/login",
   },
-  session: {
-    strategy: "jwt",
-  },
-  debug: process.env.NODE_ENV === "development",
 });
 
 export { handler as GET, handler as POST };
