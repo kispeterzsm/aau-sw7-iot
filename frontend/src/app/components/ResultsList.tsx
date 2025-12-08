@@ -1,7 +1,7 @@
 "use client";
 
 import { ResultItem, ViewMode } from "@/types/types";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
@@ -32,7 +32,20 @@ export default function ResultsList({
     const isAuthenticated = !!session;
     console.log('auth session:', session);
 
-    const displayResults = isAuthenticated ? results : results.slice(0, UNAUTHENTICATED_LIMIT);
+    const filteredAndSortedResults = useMemo(() => {
+    let data = [...results];
+
+    if (viewMode === 'news') {
+      data = data.filter(r => r.type === 'news');
+    } else if (viewMode === 'websites') {
+      data = data.filter(r => r.type === 'website');
+    }
+    data.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+
+    return data;
+  }, [results, viewMode]);
+
+    const displayResults = isAuthenticated ? filteredAndSortedResults : filteredAndSortedResults.slice(0, UNAUTHENTICATED_LIMIT);
 
     const totalPages = Math.ceil(displayResults.length / ITEMS_PER_PAGE);
     const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -67,7 +80,7 @@ export default function ResultsList({
                             ? `Sources mentioning "${selectedSentence.substring(0, 30)}..."`
                             : results.length === 0
                                 ? 'Submit a claim to begin tracing'
-                                : 'Ordered by first appearance'
+                                : 'Ordered by newest published date'
                         }
                     </div>
                 </div>
@@ -76,11 +89,11 @@ export default function ResultsList({
                 <div className="flex flex-col items-end">
                     <div className="px-3 py-1.5 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 dark:from-emerald-100/50 dark:to-cyan-100/50 border border-emerald-500/30 dark:border-emerald-300/30 rounded-full text-sm font-bold text-emerald-600 dark:text-emerald-300">
                         {displayResults.length}
-                        {!isAuthenticated && results.length > UNAUTHENTICATED_LIMIT && '+'}
+                        {!isAuthenticated && filteredAndSortedResults.length > UNAUTHENTICATED_LIMIT && '+'}
                     </div>
                     <span className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                         {displayResults.length === 1 ? 'source' : 'sources'}
-                        {!isAuthenticated && results.length > UNAUTHENTICATED_LIMIT && ' shown'}
+                        {!isAuthenticated && filteredAndSortedResults.length > UNAUTHENTICATED_LIMIT && ' shown'}
                     </span>
                 </div>
             </div>
