@@ -4,14 +4,16 @@ import React, { useEffect, useState } from "react";
 import Navbar from "../../components/Navbar";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { setEmailMfaEnabled, requestEmailOtp, verifyEmailOtp } from "../../actions/actions";
+import { setEmailMfaEnabled, requestEmailOtp, verifyEmailOtp, getUserHistory, changeUserPassword } from "../../actions/actions";
+import HistoryPanel from "@/app/components/HistoryPanel";
+import { useRouter } from "next/navigation";
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8999";
 
 type View = "security" | "change-password";
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const sessionUserId = (session as any)?.user?.id as string | undefined;
   const sessionEmail = (session as any)?.user?.email as string | undefined;
 
@@ -20,8 +22,8 @@ export default function SettingsPage() {
   const [userId, setUserId] = useState<string | undefined>(sessionUserId);
   const [email, setEmail] = useState<string | undefined>(sessionEmail);
 
-  // MFA state
-  const [mfaEnabled, setMfaEnabled] = useState<boolean>(false); // set optimistically; real source of truth in backend
+
+  const [mfaEnabled, setMfaEnabled] = useState<boolean>(false);
   const [requestSent, setRequestSent] = useState<boolean>(() => {
     try { return sessionStorage.getItem("mfa_request_sent") === "1"; } catch { return false; }
   });
@@ -35,24 +37,49 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Keep session-derived userId/email in sync (no /me fetch)
-  useEffect(() => {
-    setUserId(sessionUserId);
-    setEmail(sessionEmail);
-  }, [sessionUserId, sessionEmail]);
+  const router = useRouter();
+  const [showHistory, setShowHistory] = useState(false);
 
-  /* -------- MFA handlers -------- */
+  useEffect(() => {
+    if (session?.user) {
+      setUserId(session.user.id);
+      setEmail(session.user.email);
+      setMfaEnabled(session.user.mfa_email_enabled || false);
+    }
+  }, [session]);
+
+
+  const [userHistory, setUserHistory] = useState<{
+    id: number;
+    user_id: number;
+    cache_id: number;
+    url: string;
+    view_count: number;
+    created_at: string;
+  }[]>([]);
+
+  useEffect(() => {
+    if ((session as any)?.user?.id) {
+      (async () => {
+        try {
+          const hist = await getUserHistory((session as any).user.id);
+          setUserHistory(hist || []);
+        } catch (err) {
+          console.error("Failed to load history:", err);
+        }
+      })();
+    }
+  }, [session]);
+
 
   async function handleEnableMfa() {
     if (!userId) return toast.error("Please sign in first");
     setIsProcessing(true);
     try {
-      // set enabled flag on backend (your backend should not mark fully enabled until verified)
       await setEmailMfaEnabled(userId, true);
-      // request OTP
       await requestEmailOtp(userId);
       toast("Verification code sent to your email ✉️");
-      setMfaEnabled(false); // still pending until verify
+      setMfaEnabled(false); 
       setRequestSent(true);
       try { sessionStorage.setItem("mfa_request_sent", "1"); } catch {}
     } catch (err: any) {
@@ -77,35 +104,43 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleVerifyOtp() {
+async function handleVerifyOtp() {
     if (!userId) return toast.error("Please sign in first");
     if (!otpCode || otpCode.trim().length < 4) return toast.error("Enter the code");
     setIsProcessing(true);
     try {
       await verifyEmailOtp(userId, otpCode.trim());
+      
       setMfaEnabled(true);
       setOtpCode("");
       setRequestSent(false);
       try { sessionStorage.removeItem("mfa_request_sent"); } catch {}
+      
+      await update({ mfa_email_enabled: true }); 
+
       toast.success("MFA enabled - verification succeeded");
     } catch (err: any) {
-      toast.error("Invalid or expired code", { description: err?.message || "Try again" });
+      toast.error("Invalid code", { description: err?.message });
     } finally {
       setIsProcessing(false);
     }
   }
 
-  async function handleDisableMfa() {
+async function handleDisableMfa() {
     if (!userId) return toast.error("Please sign in first");
     setIsProcessing(true);
     try {
       await setEmailMfaEnabled(userId, false);
+      
       setMfaEnabled(false);
       setRequestSent(false);
       try { sessionStorage.removeItem("mfa_request_sent"); } catch {}
+
+      await update({ mfa_email_enabled: false });
+
       toast.success("Email MFA disabled");
     } catch (err: any) {
-      toast.error("Unable to disable MFA", { description: err?.message || "Try again" });
+      toast.error("Unable to disable MFA", { description: err?.message });
     } finally {
       setIsProcessing(false);
     }
@@ -128,44 +163,34 @@ export default function SettingsPage() {
   async function handleChangePassword(e?: React.FormEvent) {
     e?.preventDefault();
     if (!userId) return toast.error("Please sign in first");
-    if (!curPassword || !newPassword || !confirmPassword) return toast.error("Fill all fields");
+    if (!curPassword || !newPassword) return toast.error("Fill all fields");
     if (!validateNewPassword()) return;
 
     setChangingPassword(true);
+    
     try {
-      // NOTE: calling your backend change-password endpoint.
-      // I use query param user_id for compatibility with your other endpoints.
-      // If your backend requires auth via cookie or Authorization header, change accordingly.
-      const url = `${BACKEND}/user/change-password?user_id=${encodeURIComponent(userId)}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword: curPassword, newPassword }),
-      });
+      const result = await changeUserPassword(userId, curPassword, newPassword);
 
-      if (res.ok) {
-        toast.success("Password changed");
+      if (result.success) {
+        toast.success(result.message);
         setCurPassword("");
         setNewPassword("");
-        setConfirmPassword("");
+     
       } else {
-        const obj = await res.json().catch(() => ({ message: "Unable to change password" }));
-        toast.error("Change failed", { description: obj.message || "Try again" });
+        toast.error(result.message, { 
+          description: result.error 
+        });
       }
     } catch (err: any) {
-      toast.error("Change failed", { description: err?.message || "Try again" });
+      toast.error("Change failed", { description: "An unexpected error occurred" });
     } finally {
       setChangingPassword(false);
     }
   }
-
-  /* -------- UI -------- */
-
-  // If session is not ready show a small message
   if (status === "loading") {
     return (
       <>
-        <Navbar />
+        <Navbar onShowHistory={() => setShowHistory(true)} />
         <div className="max-w-7xl mx-auto px-6 md:px-8 py-10">
           <div className="rounded-3xl p-6 bg-gradient-to-br from-white to-slate-50 shadow-2xl text-center">Loading…</div>
         </div>
@@ -175,7 +200,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <Navbar />
+      <Navbar onShowHistory={() => setShowHistory(true)} />
 
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-10">
         <div className="grid grid-cols-12 gap-6">
@@ -193,7 +218,7 @@ export default function SettingsPage() {
                 <nav className="mt-6 space-y-2">
                   <button
                     onClick={() => setActiveView("security")}
-                    className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${activeView === "security"
+                    className={`w-full cursor-pointer text-left flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${activeView === "security"
                       ? "bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200/30 shadow-sm text-emerald-700 dark:text-emerald-300"
                       : "hover:bg-slate-100/50 dark:hover:bg-slate-800/30 text-slate-700 dark:text-slate-300"
                       }`}
@@ -207,7 +232,7 @@ export default function SettingsPage() {
 
                   <button
                     onClick={() => setActiveView("change-password")}
-                    className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${activeView === "change-password"
+                    className={`w-full cursor-pointer text-left flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${activeView === "change-password"
                       ? "bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200/30 shadow-sm text-emerald-700 dark:text-emerald-300"
                       : "hover:bg-slate-100/50 dark:hover:bg-slate-800/30 text-slate-700 dark:text-slate-300"
                       }`}
@@ -240,7 +265,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                     {activeView === "security"
                       ? "Manage two-factor authentication and account security settings."
-                      : "Change your account password — choose a strong, unique password."
+                      : "Change your account password - choose a strong, unique password."
                     }
                   </p>
                 </div>
@@ -283,7 +308,7 @@ export default function SettingsPage() {
                           <button
                             onClick={handleDisableMfa}
                             disabled={isProcessing}
-                            className="rounded-full px-4 py-2 border border-rose-300 text-rose-600 hover:bg-rose-50 transition-colors"
+                            className="rounded-full cursor-pointer px-4 py-2 border border-rose-300 text-rose-600 hover:bg-rose-50 transition-colors"
                           >
                             {isProcessing ? "Processing…" : "Disable Email MFA"}
                           </button>
@@ -324,7 +349,7 @@ export default function SettingsPage() {
                     <div className="p-4 rounded-xl border border-slate-200/50 bg-slate-50 dark:bg-slate-800/30 dark:border-slate-700/50">
                       <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Security tips</h3>
                       <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                        <li>• Use a strong, unique password — at least 12 characters when possible.</li>
+                        <li>• Use a strong, unique password - at least 12 characters when possible.</li>
                         <li>• Enable Email MFA for additional protection.</li>
                         <li>• Consider backup/recovery options (contact support if you lose access).</li>
                         <li>• Monitor login activity and report suspicious attempts.</li>
@@ -360,24 +385,11 @@ export default function SettingsPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Confirm new password</label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full mt-2 px-4 py-2 rounded-lg border bg-white text-sm focus:outline-none"
-                        placeholder="Repeat new password"
-                        required
-                        minLength={8}
-                      />
-                    </div>
-
                     <div className="flex items-center gap-3 mt-2">
                       <button
                         type="submit"
                         disabled={changingPassword}
-                        className="rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-white font-semibold shadow hover:scale-[1.02] transition-transform disabled:opacity-50"
+                        className="rounded-full cursor-pointer bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-white font-semibold shadow hover:scale-[1.02] transition-transform disabled:opacity-50"
                       >
                         {changingPassword ? "Changing…" : "Change password"}
                       </button>
@@ -389,7 +401,7 @@ export default function SettingsPage() {
                           setNewPassword("");
                           setConfirmPassword("");
                         }}
-                        className="rounded-full px-4 py-2 border border-slate-200/50 text-sm"
+                        className="rounded-full cursor-pointer px-4 py-2 border border-slate-200/50 text-sm"
                       >
                         Reset
                       </button>
@@ -405,6 +417,16 @@ export default function SettingsPage() {
           </main>
         </div>
       </div>
+
+  <HistoryPanel
+    history={userHistory}
+    isOpen={showHistory}
+    onClose={() => setShowHistory(false)}
+    onSelectHistory={(url) => {
+      setShowHistory(false);
+      router.push(`/?q=${encodeURIComponent(url)}`);
+    }}
+  />
     </>
   );
 }

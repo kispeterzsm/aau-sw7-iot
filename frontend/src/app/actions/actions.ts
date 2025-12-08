@@ -3,16 +3,11 @@
 import {
   ResultItem,
   AnalysisSection,
-  JobStatus,
-  RegisterResponse,
   AnalysisResponse,
   TopNewsResponse,
 } from "@/types/types";
-import bcrypt from "bcryptjs";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8999";
-const SALT_ROUNDS = 12;
+const BACKEND_URL = "http://127.0.0.1:8999";
 
 export async function loadTopNews(limit: number = 10): Promise<ResultItem[]> {
   try {
@@ -56,16 +51,19 @@ export async function analyzeURL(
   try {
     console.log("🔄 Analyzing URL via backend:", url);
 
-    const response = await fetch(`${BACKEND_URL}/search/link`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        input: url,
-        search_depth: searchDepth,
-      }),
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/search/link`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input: url,
+          search_depth: searchDepth,
+        }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -91,16 +89,19 @@ export async function analyzeText(
       text.substring(0, 50) + "..."
     );
 
-    const response = await fetch(`${BACKEND_URL}/search/text`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        input: text,
-        search_depth: searchDepth,
-      }),
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/search/text`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input: text,
+          search_depth: searchDepth,
+        }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -206,76 +207,6 @@ function classifyType(url: string, title: string): "news" | "website" {
   return hasNewsKeyword ? "news" : "website";
 }
 
-export async function registerUser(formData: {
-  email: string;
-  password: string;
-  name?: string;
-}): Promise<{ success: boolean; message: string; error?: string }> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ...formData }),
-    });
-
-    const responseData: RegisterResponse = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      // Handle specific error cases
-      if (res.status === 400) {
-        const errorMessage = responseData || "Registration failed";
-
-        if (errorMessage) {
-          return {
-            success: false,
-            message: `${errorMessage}`,
-            error:
-              "An account with this email already exists. Please sign in instead.",
-          };
-        }
-
-        return {
-          success: false,
-          message: "Registration failed",
-          error: errorMessage,
-        };
-      }
-
-      if (res.status === 500) {
-        return {
-          success: false,
-          message: "Server error",
-          error: "Unable to create account. Please try again later.",
-        };
-      }
-
-      // Generic error for other status codes
-      return {
-        success: false,
-        message: "Registration failed",
-        error:
-          responseData.message ||
-          responseData.error ||
-          "Unable to create account. Please try again.",
-      };
-    }
-
-    return {
-      success: true,
-      message: "Account created successfully!",
-    };
-  } catch (error: any) {
-    console.error("Registration error in server action:", error);
-    return {
-      success: false,
-      message: "Registration failed",
-      error:
-        "Unable to connect to the server. Please check your internet connection and try again.",
-    };
-  }
-}
 // Helper function: Generate mock results for fallback
 function generateMockResults(): ResultItem[] {
   return Array.from({ length: 5 }, (_, i) => ({
@@ -288,6 +219,43 @@ function generateMockResults(): ResultItem[] {
     confidence: 0.8 + Math.random() * 0.15,
     type: "news" as const,
   }));
+}
+//Register
+export async function registerUser(formData: {
+  email: string;
+  password: string;
+  name?: string;
+}): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...formData }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return {
+        success: false,
+        message: "Registration failed",
+        error: data.message || "Unable to create account. Please try again.",
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || "Account created successfully!",
+    };
+  } catch (error: any) {
+    console.error("Registration error in server action:", error);
+    return {
+      success: false,
+      message: "Network Error",
+      error: "Unable to connect to the server. Please check your connection.",
+    };
+  }
 }
 
 // MFA
@@ -320,12 +288,11 @@ export async function verifyEmailOtp(userId: string, code: string) {
   return res.json().catch(() => ({ success: true }));
 }
 
-
 //USER-History
 export async function getUserHistory(userId: string) {
   try {
-    console.log('Fetching user history for:', userId);
-    
+    console.log("Fetching user history for:", userId);
+
     const response = await fetch(`${BACKEND_URL}/history/user/${userId}`, {
       method: "GET",
       headers: {
@@ -339,8 +306,8 @@ export async function getUserHistory(userId: string) {
     }
 
     const history = await response.json();
-    console.log('✅ User history received:', history);
-    
+    console.log("✅ User history received:", history);
+
     return history;
   } catch (error) {
     console.error("Error in getUserHistory server action:", error);
@@ -348,18 +315,22 @@ export async function getUserHistory(userId: string) {
   }
 }
 
-export async function addToUserHistory(userId: string, url: string, cacheId?: number) {
+export async function addToUserHistory(
+  userId: string,
+  url: string,
+  cacheId?: number
+) {
   try {
-    console.log('Adding to user history:', { userId, url });
-    
+    console.log("Adding to user history:", { userId, url });
+
     const response = await fetch(`${BACKEND_URL}/history/user/${userId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         url,
-        cache_id: cacheId 
+        cache_id: cacheId,
       }),
     });
 
@@ -368,11 +339,121 @@ export async function addToUserHistory(userId: string, url: string, cacheId?: nu
     }
 
     const result = await response.json();
-    console.log('✅ Added to user history:', result);
-    
+    console.log("✅ Added to user history:", result);
+
     return result;
   } catch (error) {
     console.error("Error in addToUserHistory server action:", error);
     return null;
+  }
+}
+
+export async function requestPasswordResetOtp(email: string) {
+  try {
+    const url = new URL(`${BACKEND_URL}/password/forgot`);
+    url.searchParams.append("email", email);
+
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        message:
+          errorData.message ||
+          "Failed to send reset code. Please check the email.",
+      };
+    }
+    return { success: true, message: "Reset code sent to your email." };
+  } catch (error: any) {
+    console.error("Forgot password request error:", error);
+    return {
+      success: false,
+      message: "Network error. Please try again later.",
+    };
+  }
+}
+
+export async function resetPasswordWithOtp(data: {
+  email: string;
+  code: string;
+  newPassword: string;
+}) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/password/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: data.email,
+        code: data.code,
+        new_password: data.newPassword,
+      }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        message:
+          errorData.message ||
+          "Failed to reset password. Invalid code or expired.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Password reset successfully. You can now login.",
+    };
+  } catch (error: any) {
+    console.error("Reset password error:", error);
+    return {
+      success: false,
+      message: "Network error. Please try again later.",
+    };
+  }
+}
+
+export async function changeUserPassword(
+  userId: string | number,
+  oldPassword: string,
+  newPassword: string
+) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/password/change`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: Number(userId),
+        old_password: oldPassword,
+        new_password: newPassword,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return {
+        success: false,
+        message: "Password change failed",
+        error: data.error || "Invalid current password or server error.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Password changed successfully",
+    };
+  } catch (error: any) {
+    console.error("Change password error:", error);
+    return {
+      success: false,
+      message: "Network Error",
+      error: "Unable to connect to server. Please try again.",
+    };
   }
 }

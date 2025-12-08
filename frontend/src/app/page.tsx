@@ -12,6 +12,42 @@ import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import HistoryPanel from "./components/HistoryPanel";
 
+
+const GUEST_HISTORY_KEY = "iot_guest_history_v1";
+
+const getGuestHistory = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const item = localStorage.getItem(GUEST_HISTORY_KEY);
+    return item ? JSON.parse(item) : [];
+  } catch { return []; }
+};
+
+const saveToGuestHistory = (url: string) => {
+  if (typeof window === 'undefined') return;
+  const current = getGuestHistory();
+  const existingIndex = current.findIndex((h: any) => h.url === url);
+
+  const newItem = {
+    id: Date.now(),
+    user_id: 0,
+    cache_id: 0,
+    url: url,
+    view_count: existingIndex > -1 ? current[existingIndex].view_count + 1 : 1,
+    created_at: new Date().toISOString()
+  };
+
+  let updated;
+  if (existingIndex > -1) {
+    updated = [...current];
+    updated[existingIndex] = newItem;
+  } else {
+    updated = [newItem, ...current];
+  }
+
+  localStorage.setItem(GUEST_HISTORY_KEY, JSON.stringify(updated.slice(0, 50)));
+  return updated;
+};
 export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
@@ -38,6 +74,8 @@ export default function Page() {
     handleLoadTopNews();
     if (session?.user?.id) {
       loadUserHistory(session.user.id);
+    } else {
+      setUserHistory(getGuestHistory());
     }
   }, [session]);
 
@@ -95,9 +133,21 @@ export default function Page() {
 
     try {
       const isURL = trimmed.startsWith('http://') || trimmed.startsWith('https://');
-
       const jobId = `job_${Date.now()}`;
       setJobId(jobId);
+
+      // HISTORY SAVING LOGIC
+      if (isURL) {
+        if (session?.user?.id) {
+          addToUserHistory(session.user.id, trimmed).then(() => {
+            loadUserHistory(session.user.id); // Refresh list
+          });
+        } else {
+          // Guest User -> Local Storage
+          const updatedGuestHistory = saveToGuestHistory(trimmed);
+          if (updatedGuestHistory) setUserHistory(updatedGuestHistory);
+        }
+      }
 
       const handle = simulateProgress((progress, status) => {
         setStatus(status);
@@ -109,15 +159,10 @@ export default function Page() {
       let analysisResults: AnalysisSection[];
       if (isURL) {
         analysisResults = await analyzeURL(trimmed, 2);
-        // Record URL searches in history
-        if (session?.user?.id) {
-          await addToUserHistory(session.user.id, trimmed);
-        }
       } else {
         analysisResults = await analyzeText(trimmed, 2);
       }
 
-      // Clear simulation and set results
       if (subscriptionRef.current) {
         window.clearInterval(subscriptionRef.current);
         subscriptionRef.current = null;
@@ -140,19 +185,16 @@ export default function Page() {
       setIsSearching(false);
     }
   }
-
   const filteredResults = useMemo(() => {
     if (selectedSentence) {
       const section = analysisSections.find(s => s.sentence === selectedSentence);
       if (!section) return [];
-
       switch (viewMode) {
         case 'news': return section.news_results;
         case 'websites': return section.website_results;
         default: return [...section.news_results, ...section.website_results];
       }
     }
-
     switch (viewMode) {
       case 'news': return results.filter(r => r.type === 'news');
       case 'websites': return results.filter(r => r.type === 'website');
