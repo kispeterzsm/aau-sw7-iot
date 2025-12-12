@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -23,6 +24,25 @@ public class DownstreamService {
     private final WebClient webClient;
     private final DownstreamProperties props;
     private final ObjectMapper objectMapper;
+
+    public void cancelDownstreamJob(String jobId) {
+        if (jobId == null || jobId.isBlank()) return;
+        try {
+            String serviceUrl = props.getTextUrl(); 
+            URI uri = new URI(serviceUrl);
+            String baseUrl = uri.getScheme() + "://" + uri.getAuthority();
+            String cancelUrl = baseUrl + "/cancel/" + jobId;
+            WebClient.create() 
+                    .post()
+                    .uri(cancelUrl)
+                    .header(props.getAuthHeader(), props.getAuthToken())
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block(Duration.ofSeconds(3));
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to cancel job " + jobId + ": " + e.getMessage());
+        }
+    }
 
     public String normalizeUrl(String u) {
         try {
@@ -79,6 +99,10 @@ public class DownstreamService {
                 body = objectMapper.createObjectNode().put("raw", e.getResponseBodyAsString());
             }
         } catch (Exception e) {
+            if (e.getCause() instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
+                throw new RuntimeException("Downstream call interrupted", e);
+            }
+            
             int elapsedMs = (int) ((System.nanoTime() - start) / 1_000_000);
             throw new RuntimeException("Downstream connection error: " + e.getMessage() +
                     " (elapsed " + elapsedMs + " ms)", e);

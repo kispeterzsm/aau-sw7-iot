@@ -26,4 +26,12 @@ public class SearchHistoryService {
         h.setViewCount(h.getViewCount() + 1);
         return repo.save(h);
     }
+
+    public void recordHistorySafe(Long userId, String cacheKey) {
+        if (userId == null || cacheKey == null) {
+            return;
+        }
+        int rowsAffected = repo.upsertHistoryByCacheKey(userId, cacheKey);
+    }
+
 }
