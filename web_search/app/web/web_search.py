@@ -1,6 +1,6 @@
 import time
 import logging
-import datefinder
+import dateparser
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
@@ -63,13 +63,13 @@ class WebScraping:
     @staticmethod
     def parse_bing_date(text: str) -> Optional[datetime]:
         """
-        Extracts the first date from text using datefinder
+        Extracts the date from text using dateparser
         """
         if not text:
             return None
 
         text_lower = text.lower()
-        return next(datefinder.find_dates(text_lower), None)
+        return dateparser.parse(text_lower)
 
     @staticmethod
     def clean_bing_url(url: str) -> str:

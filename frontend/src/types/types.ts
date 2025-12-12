@@ -1,4 +1,4 @@
-export type JobStatus = "queued" | "processing" | "completed" | "failed";
+export type JobStatus = "queued" | "processing" | "completed" | "failed" | "cancelled";
 
 export type ViewMode = "all" | "news" | "websites";
 

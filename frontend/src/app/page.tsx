@@ -7,8 +7,8 @@ import TimelinePanel from "./components/TimelinePanel";
 import { ResultItem, JobStatus, AnalysisSection, ViewMode } from "@/types/types";
 import Navbar from "./components/Navbar";
 import TextHighlighter from "./components/TextHighlighter";
-import { loadTopNews, analyzeURL, analyzeText, getUserHistory, addToUserHistory } from "./actions/actions";
-import { useSession, signIn } from "next-auth/react";
+import { loadTopNews, analyzeURL, analyzeText, getUserHistory, cancelSearch } from "./actions/actions";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import HistoryPanel from "./components/HistoryPanel";
 
@@ -48,6 +48,7 @@ const saveToGuestHistory = (url: string) => {
   localStorage.setItem(GUEST_HISTORY_KEY, JSON.stringify(updated.slice(0, 50)));
   return updated;
 };
+
 export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
@@ -64,8 +65,8 @@ export default function Page() {
   const [originalContent, setOriginalContent] = useState<string>("");
   const [userHistory, setUserHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-
   const subscriptionRef = useRef<number | null>(null);
+  const abortRef = useRef<boolean>(false);
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -85,7 +86,6 @@ export default function Page() {
       setResults(newsResults);
     } catch (err) {
       console.error('Error loading top news:', err);
-      // Fallback
     }
   }
 
@@ -113,6 +113,25 @@ export default function Page() {
     return interval;
   }
 
+async function handleCancel() {
+    console.log("Cancelling search...");
+    abortRef.current = true;
+
+    if (subscriptionRef.current) {
+      window.clearInterval(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+
+    setIsSearching(false);
+    setStatus("cancelled" as any);
+    setProgress(0);
+    setError(null);
+
+    if (jobId) {
+      cancelSearch(jobId).catch(err => console.error("Background cancel failed", err));
+    }
+  }
+
   async function handleSearch(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
@@ -122,46 +141,51 @@ export default function Page() {
       return;
     }
 
+    abortRef.current = false;
+
     setIsSearching(true);
     setResults([]);
     setAnalysisSections([]);
     setSelectedSentence(null);
     setProgress(0);
-    setJobId(null);
+    
+    const newJobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setJobId(newJobId);
+    
     setStatus("queued");
     setOriginalContent(trimmed);
 
     try {
       const isURL = trimmed.startsWith('http://') || trimmed.startsWith('https://');
 
-      const jobId = `job_${Date.now()}`;
-      setJobId(jobId);
-
-      // HISTORY SAVING LOGIC
-      if (isURL) {
-        if (session?.user?.id) {
-          addToUserHistory(session.user.id, trimmed).then(() => {
-            loadUserHistory(session.user.id); // Refresh list
-          });
-        } else {
-          // Guest User -> Local Storage
+      if (isURL && !session?.user?.id) {
           const updatedGuestHistory = saveToGuestHistory(trimmed);
           if (updatedGuestHistory) setUserHistory(updatedGuestHistory);
-        }
       }
 
       const handle = simulateProgress((progress, status) => {
-        setStatus(status);
-        setProgress(progress);
+        if (!abortRef.current) {
+            setStatus(status);
+            setProgress(progress);
+        }
       });
 
       subscriptionRef.current = handle;
 
       let analysisResults: AnalysisSection[];
       if (isURL) {
-        analysisResults = await analyzeURL(trimmed, 2);
+        analysisResults = await analyzeURL(trimmed, 2, session?.user?.id, newJobId)
       } else {
-        analysisResults = await analyzeText(trimmed, 2);
+        analysisResults = await analyzeText(trimmed, 2, session?.user?.id, newJobId)
+      }
+
+      if (abortRef.current) {
+        console.log("Result received but ignored due to cancellation.");
+        return;
+      }
+
+      if (session?.user?.id) {
+          loadUserHistory(session.user.id);
       }
 
       // Clear simulation and set results
@@ -182,10 +206,14 @@ export default function Page() {
       setStatus("completed");
 
     } catch (err: any) {
-      setError(err?.message || "Analysis failed. Using sample data for demonstration.");
-      setStatus("failed");
+      if (!abortRef.current) {
+          setError(err?.message || "Analysis failed. Using sample data for demonstration.");
+          setStatus("failed");
+      }
     } finally {
-      setIsSearching(false);
+      if (!abortRef.current) {
+          setIsSearching(false);
+      }
     }
   }
 
@@ -260,6 +288,7 @@ export default function Page() {
                 input={input}
                 setInput={setInput}
                 onSearch={handleSearch}
+                onCancel={handleCancel}
                 isSearching={isSearching}
                 progress={progress}
                 status={status}

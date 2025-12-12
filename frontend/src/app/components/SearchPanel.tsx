@@ -1,7 +1,7 @@
 "use client";
 
 import { JobStatus, ViewMode } from "@/types/types";
-import React from "react";
+import React, { useState } from "react";
 
 type Props = {
     input: string;
@@ -30,6 +30,9 @@ export default function SearchPanel({
     viewMode,
     onViewModeChange,
 }: Props) {
+    // State to track hover for the cancel button
+    const [isHovered, setIsHovered] = useState(false);
+
     return (
         <div className="bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl shadow-2xl p-6 border border-slate-200/50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 dark:border-slate-700/50 sticky top-24">
             <div className="flex items-center gap-3 mb-1">
@@ -87,17 +90,39 @@ export default function SearchPanel({
 
                     <button
                         type="submit"
-                        disabled={isSearching || !input.trim()}
-                        className="cursor-pointer col-span-2 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold rounded-xl shadow-lg disabled:cursor-not-allowed transition-all hover:shadow-emerald-500/30 hover:shadow-md "
+                        disabled={!isSearching && !input.trim()}
+                        onMouseEnter={() => setIsHovered(true)}
+                        onMouseLeave={() => setIsHovered(false)}
+                        onClick={(e) => {
+                            if (isSearching) {
+                                e.preventDefault();
+                                onCancel?.();
+                            }
+                        }}
+                        className={`cursor-pointer col-span-2 inline-flex items-center justify-center gap-2 px-4 py-3 text-white font-semibold rounded-xl shadow-lg disabled:cursor-not-allowed transition-all hover:shadow-md 
+                            ${isSearching && isHovered
+                                ? "bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-red-500/30"
+                                : "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 hover:shadow-emerald-500/30"
+                            }
+                        `}
                     >
                         {isSearching ? (
-                            <>
-                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span className="text-sm font-semibold">Tracing...</span>
-                            </>
+                            isHovered ? (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    <span className="text-sm font-semibold">Cancel tracing</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="text-sm font-semibold">Tracing...</span>
+                                </>
+                            )
                         ) : (
                             <>
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -178,7 +203,7 @@ export default function SearchPanel({
                     </div>
 
 
-                    <div className="grid grid-cols-2 gap-3 mt-4">
+                    {/* <div className="grid grid-cols-2 gap-3 mt-4">
                         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/30 rounded-lg p-3 backdrop-blur-sm dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-500/30">
                             <div className="text-xs text-emerald-700/70 mb-2 font-semibold uppercase tracking-wide">Workers</div>
                             <div className="flex items-center gap-2">
@@ -206,7 +231,7 @@ export default function SearchPanel({
                                 <span className="text-sm font-bold text-cyan-700">12</span>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </form>
 

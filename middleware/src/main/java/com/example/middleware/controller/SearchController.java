@@ -42,7 +42,6 @@ public class SearchController {
         String normUrl = downstreamService.normalizeUrl(req.getInput());
         String cacheKey = downstreamService.cacheKey(req.getInput(), req.getSearchDepth());
 
-
         Optional<WrapData> cachedOpt = cacheService.fetchCached(cacheKey);
         if (cachedOpt.isPresent()) {
             WrapResponse resp = new WrapResponse();
@@ -52,7 +51,6 @@ public class SearchController {
             resp.setDownstreamMs(0);
             resp.setData(cachedOpt.get());
 
-
             recordHistory(req.getUserId(), cacheKey);
             return resp;
         }
@@ -60,7 +58,6 @@ public class SearchController {
         Map<String, Object> payload = new HashMap<>();
         payload.put("input", req.getInput());
         payload.put("search_depth", req.getSearchDepth());
-
         DownstreamService.DownstreamResult result;
         try {
             result = downstreamService.callDownstream(downstreamUrl, payload);
@@ -116,7 +113,6 @@ public class SearchController {
             throw e;
         }
 
-
         cacheService.save(cacheKey, dataModel);
         recordHistory(req.getUserId(), cacheKey);
 
@@ -130,19 +126,13 @@ public class SearchController {
     }
 
     private void recordHistory(Long userId, String cacheKey) {
-        if (userId == null) {
-            return;
-        }
+        if (userId == null) return;
 
         Optional<User> userOpt = userRepository.findById(userId);
-        if (userOpt.isEmpty()) {
-            return;
-        }
+        if (userOpt.isEmpty()) return;
 
         Optional<LinkCache> cacheOpt = cacheService.findCacheEntityByKey(cacheKey);
-        if (cacheOpt.isEmpty()) {
-            return;
-        }
+        if (cacheOpt.isEmpty()) return;
 
         searchHistoryService.increment(userOpt.get(), cacheOpt.get());
     }

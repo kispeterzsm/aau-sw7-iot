@@ -16,7 +16,7 @@ const Navbar: React.FC<Props> = ({ onShowHistory }) => {
   const [showDropdown, setShowDropdown] = React.useState(false);
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    await signOut({ callbackUrl: window.location.origin });
     setShowDropdown(false);
   };
 

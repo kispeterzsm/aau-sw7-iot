@@ -33,7 +33,7 @@ class Local_LLM():
 
 class NLP_Pipeline():
     def __init__(self, hf_token:str):
-        login(hf_token)
+        login(token=hf_token.strip(), add_to_git_credential=False) 
 
         # Load models
         try:
@@ -193,9 +193,13 @@ class NLP_Pipeline():
     def query_variations(self, query: str, num_variations: int = 5) -> List[str]:
             messages = [
                 {
+                    "role": "system", 
+                    "content": "You are a precise search query generator. Output ONLY the queries. Do not output any conversational text, preambles, or numbered lists."
+                },
+                {
                     "role": "user",
                     "content": f"Generate {num_variations} diverse search engine queries about the topic '{query}'.\n"
-                            f"The queries should be conceptually different. Do not use a numbered list or bullet points. Just list each query on a new line."
+                            f"The queries should be conceptually different. Just list each query on a new line."
                 },
             ]
             

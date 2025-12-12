@@ -40,7 +40,7 @@ export default function ResultsList({
     } else if (viewMode === 'websites') {
       data = data.filter(r => r.type === 'website');
     }
-    data.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+    data.sort((a, b) => new Date(a.published).getTime() - new Date(b.published).getTime());
 
     return data;
   }, [results, viewMode]);

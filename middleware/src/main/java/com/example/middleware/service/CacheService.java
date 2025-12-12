@@ -77,7 +77,7 @@ public class CacheService {
             entity.setUrl(ud.url);
             entity.setSearchDepth(ud.depth);
             entity.setResponse(json);
-            repo.save(entity);
+            repo.saveAndFlush(entity);
         } catch (Exception e) {
             System.out.println("[db] save_response failed: " + e);
         }

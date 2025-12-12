@@ -47,7 +47,9 @@ export async function loadTopNews(limit: number = 10): Promise<ResultItem[]> {
 
 export async function analyzeURL(
   url: string,
-  searchDepth: number = 2
+  searchDepth: number = 2,
+  userId?: string | number,
+  jobId?: string | null
 ): Promise<AnalysisSection[]> {
   try {
     console.log('🔄 Analyzing URL via backend:', url);
@@ -59,7 +61,9 @@ export async function analyzeURL(
       },
       body: JSON.stringify({ 
         input: url,
-        search_depth: searchDepth 
+        search_depth: searchDepth,
+        userId: userId ? Number(userId) : null,
+        job_id: jobId || null
       }),
     });
 
@@ -79,7 +83,9 @@ export async function analyzeURL(
 
 export async function analyzeText(
   text: string,
-  searchDepth: number = 2
+  searchDepth: number = 2,
+  userId?: string | number,
+  jobId?: string | null
 ): Promise<AnalysisSection[]> {
   try {
     console.log('🔄 Analyzing text via backend:', text.substring(0, 50) + '...');
@@ -90,7 +96,9 @@ export async function analyzeText(
       },
       body: JSON.stringify({ 
         input: text,
-        search_depth: searchDepth 
+        search_depth: searchDepth,
+        userId: userId ? Number(userId) : null,
+        job_id: jobId || null
       }),
     });
 
@@ -105,6 +113,27 @@ export async function analyzeText(
   } catch (error) {
     console.error("Error in analyzeText server action:", error);
     return [];
+  }
+}
+
+export async function cancelSearch(jobId: string) {
+  try {
+    console.log(`🛑 Requesting cancellation for job: ${jobId}`);
+    
+    const response = await fetch(`${BACKEND_URL}/search/stop/${jobId}`, {
+      method: "POST",
+    });
+
+    if (response.ok) {
+        console.log("✅ Search cancelled successfully.");
+        return true;
+    } else {
+        console.error("⚠️ Backend returned error on cancel:", response.status);
+        return false;
+    }
+  } catch (error) {
+    console.error("❌ Failed to cancel search action:", error);
+    return false;
   }
 }
 
