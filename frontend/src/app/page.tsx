@@ -63,6 +63,7 @@ export default function Page() {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [selectedSentence, setSelectedSentence] = useState<string | null>(null);
   const [originalContent, setOriginalContent] = useState<string>("");
+  const [analyzedContent, setAnalyzedContent] = useState<string>("");
   const [userHistory, setUserHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const subscriptionRef = useRef<number | null>(null);
@@ -72,7 +73,7 @@ export default function Page() {
 
   useEffect(() => {
     setMounted(true);
-    handleLoadTopNews();
+    // handleLoadTopNews(); // Mock data disabled
     if (session?.user?.id) {
       loadUserHistory(session.user.id);
     } else {
@@ -83,7 +84,8 @@ export default function Page() {
   async function handleLoadTopNews(limit: number = 10) {
     try {
       const newsResults = await loadTopNews(limit);
-      setResults(newsResults);
+      const taggedNews = newsResults.map((r: ResultItem) => ({ ...r, type: 'news' as const }));
+      setResults(taggedNews);
     } catch (err) {
       console.error('Error loading top news:', err);
     }
@@ -132,13 +134,17 @@ async function handleCancel() {
     }
   }
 
-  async function handleSearch(e?: React.FormEvent) {
+  async function handleSearch(e?: React.FormEvent, overrideTerm?: string) {
     e?.preventDefault();
     setError(null);
-    const trimmed = input.trim();
+    const effectiveInput = overrideTerm !== undefined ? overrideTerm : input;
+    const trimmed = effectiveInput.trim();
     if (!trimmed) {
       setError("Paste text or a URL to analyze.");
       return;
+    }
+    if (overrideTerm !== undefined) {
+      setInput(overrideTerm);
     }
 
     abortRef.current = false;
@@ -154,6 +160,7 @@ async function handleCancel() {
     
     setStatus("queued");
     setOriginalContent(trimmed);
+    setAnalyzedContent(trimmed);
 
     try {
       const isURL = trimmed.startsWith('http://') || trimmed.startsWith('https://');
@@ -194,10 +201,17 @@ async function handleCancel() {
         subscriptionRef.current = null;
       }
 
-      setAnalysisSections(analysisResults);
+      // Tag results with their type
+      const taggedAnalysisResults = analysisResults.map(section => ({
+        ...section,
+        news_results: section.news_results.map(r => ({ ...r, type: 'news' as const })),
+        website_results: section.website_results.map(r => ({ ...r, type: 'website' as const }))
+      }));
+
+      setAnalysisSections(taggedAnalysisResults);
 
       // Combine all results for timeline
-      const allResults = analysisResults.flatMap(section =>
+      const allResults = taggedAnalysisResults.flatMap(section =>
         [...section.news_results, ...section.website_results]
       );
       setResults(allResults);
@@ -229,12 +243,9 @@ async function handleCancel() {
       }
     }
 
-    switch (viewMode) {
-      case 'news': return results.filter(r => r.type === 'news');
-      case 'websites': return results.filter(r => r.type === 'website');
-      default: return results;
-    }
-  }, [results, analysisSections, selectedSentence, viewMode]);
+    // return empty list if no specific sentence is chosen
+    return [];
+  }, [analysisSections, selectedSentence, viewMode]);
 
 
   async function copyLink(url: string) {
@@ -250,6 +261,10 @@ async function handleCancel() {
       Math.round((filteredResults.reduce((s, r) => s + r.confidence, 0) / filteredResults.length) * 100) : 0,
     [filteredResults]
   );
+
+  const currentSection = selectedSentence 
+    ? analysisSections.find(s => s.sentence === selectedSentence)
+    : null;
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-white text-slate-900 transition-colors duration-300 antialiased dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
@@ -272,12 +287,9 @@ async function handleCancel() {
             </span>
             <div className="w-1 h-1 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"></div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-4">
-            Trace Information Origins
+          <h1 className="text-4xl md:text-5xl font-bold leading-tight bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-4">
+            Track Information Origins
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto dark:text-slate-400">
-            Trace claims to their roots, evaluate the evidence, and make sharing decisions with confidence.
-          </p>
         </div>
 
         {/* Grid Layout - Components */}
@@ -297,6 +309,17 @@ async function handleCancel() {
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
               />
+              
+              {/* Generated Search Terms Button*/}
+              {status === 'completed' && analyzedContent && (
+                <button
+                  onClick={() => setOriginalContent(analyzedContent)}
+                  className="mt-4 w-full py-3 px-4 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-emerald-400/50 dark:hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all shadow-lg shadow-slate-200/20 dark:shadow-black/20 flex items-center justify-center gap-2 group backdrop-blur-sm"
+                >
+                  <span className="group-hover:scale-110 transition-transform text-lg">✨</span>
+                  Show generated search terms
+                </button>
+              )}
             </div>
           </div>
 
@@ -304,15 +327,25 @@ async function handleCancel() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 rounded-3xl blur-xl dark:from-cyan-500/5 dark:to-emerald-500/5"></div>
               <div className="relative">
-                <ResultsList
-                  results={filteredResults}
-                  isSearching={isSearching}
-                  copyLink={copyLink}
-                  copied={copied}
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
-                  selectedSentence={selectedSentence}
-                />
+                {!isSearching && filteredResults.length === 0 && !selectedSentence && (currentSection == null || currentSection === undefined)  ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-center bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 backdrop-blur-sm min-h-[200px]">
+                    <p className="text-slate-600 dark:text-slate-400 font-medium whitespace-pre-line">
+                      Insert or select a piece of information to view the results!{"\n"}
+                      If you have any issues please contact Support.
+                    </p>
+                  </div>
+                ) : (
+                  <ResultsList
+                    results={filteredResults}
+                    isSearching={isSearching}
+                    copyLink={copyLink}
+                    copied={copied}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    selectedSentence={selectedSentence}
+                    searchTerm={currentSection?.search_term}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -344,7 +377,6 @@ async function handleCancel() {
           selectedSentence={selectedSentence}
           onSentenceSelect={setSelectedSentence}
           onClose={() => {
-            setSelectedSentence(null);
             setOriginalContent("");
           }}
         />
@@ -356,7 +388,7 @@ async function handleCancel() {
         onSelectHistory={(url) => {
           setInput(url);
           setShowHistory(false);
-          handleSearch();
+          handleSearch(undefined, url);
         }}
       />
 

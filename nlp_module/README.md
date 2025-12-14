@@ -38,7 +38,7 @@ nlp_pipe = NLP_Pipeline(hf_token)
 
 def url_to_searchterms(url:str, top_x:int=5):
     article=get_site_data(url)
-    output=nlp_pipe.do_the_thing(article)
+    output=nlp_pipe.execute_pipeline(article)
     return output
 
 url=""
@@ -47,6 +47,6 @@ url_to_searchterms(url)
 If you just have text you want to process, run it like this: 
 
 ```python
-output=nlp_pipe.do_the_thing(input_text)
+output=nlp_pipe.execute_pipeline(input_text)
 print(output)
 ```

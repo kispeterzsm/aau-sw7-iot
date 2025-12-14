@@ -12,6 +12,7 @@ export type ResultItem = {
   confidence: number;
   type?: "news" | "website";
   original_title?: string;       
+  original_snippet?: string;
   original_language?: string;    
   is_translated?: boolean;
 };
@@ -24,7 +25,8 @@ export type BackendAnalysisSection = {
     date: string | null;
     title: string;
     snippet: string;
-    original_title?: string;     
+    original_title?: string;
+    original_snippet?: string;
     original_language?: string;
   }>;
   website_results: Array<{  
@@ -33,6 +35,7 @@ export type BackendAnalysisSection = {
     title: string;
     snippet: string;
     original_title?: string;
+    original_snippet?: string;
     original_language?: string;
   }>;
   entities?: Array<{  
@@ -47,8 +50,8 @@ export type AnalysisSection = {
   news_results: ResultItem[];
   website_results: ResultItem[];
   entities?: Array<{
-    text: string;
-    type: string;
+    name: string;
+    label: string;
   }>;
 };
 

@@ -41,7 +41,8 @@ export async function loadTopNews(limit: number = 10): Promise<ResultItem[]> {
   } catch (error) {
     console.error("Error in loadTopNews server action:", error);
     // Return mock data as fallback
-    return generateMockResults();
+    // return generateMockResults();
+    return []
   }
 }
 
@@ -52,7 +53,7 @@ export async function analyzeURL(
   jobId?: string | null
 ): Promise<AnalysisSection[]> {
   try {
-    console.log('🔄 Analyzing URL via backend:', url);
+    console.log('Analyzing URL via backend:', url);
     
     const response = await fetch(`${BACKEND_URL}/search/link`, {
       method: "POST",
@@ -72,7 +73,7 @@ export async function analyzeURL(
     }
 
     const data: AnalysisResponse = await response.json();
-    console.log('✅ URL analysis data received:', data);
+    console.log('URL analysis data received:', data);
     
     return transformBackendResults(data);
   } catch (error) {
@@ -88,7 +89,7 @@ export async function analyzeText(
   jobId?: string | null
 ): Promise<AnalysisSection[]> {
   try {
-    console.log('🔄 Analyzing text via backend:', text.substring(0, 50) + '...');
+    console.log('Analyzing text via backend:', text.substring(0, 50) + '...');
     const response = await fetch(`${BACKEND_URL}/search/text`, {
       method: "POST",
       headers: {
@@ -107,7 +108,7 @@ export async function analyzeText(
     }
 
     const data: AnalysisResponse = await response.json();
-    console.log('✅ Text analysis data received:', data);
+    console.log('Text analysis data received:', data);
     
     return transformBackendResults(data);
   } catch (error) {
@@ -118,21 +119,21 @@ export async function analyzeText(
 
 export async function cancelSearch(jobId: string) {
   try {
-    console.log(`🛑 Requesting cancellation for job: ${jobId}`);
+    console.log(`Requesting cancellation for job: ${jobId}`);
     
     const response = await fetch(`${BACKEND_URL}/search/stop/${jobId}`, {
       method: "POST",
     });
 
     if (response.ok) {
-        console.log("✅ Search cancelled successfully.");
+        console.log("Search cancelled successfully.");
         return true;
     } else {
-        console.error("⚠️ Backend returned error on cancel:", response.status);
+        console.error("Backend returned error on cancel:", response.status);
         return false;
     }
   } catch (error) {
-    console.error("❌ Failed to cancel search action:", error);
+    console.error("Failed to cancel search action:", error);
     return false;
   }
 }
@@ -165,6 +166,7 @@ function transformBackendResults(apiData: AnalysisResponse): AnalysisSection[] {
             confidence: calculateConfidence(result),
             type: "news" as const,
             original_title: result.original_title,
+            original_snippet: result.original_snippet,
             original_language: result.original_language,
             is_translated: !!result.original_language,
           })
@@ -182,14 +184,15 @@ function transformBackendResults(apiData: AnalysisResponse): AnalysisSection[] {
             confidence: calculateConfidence(result),
             type: "website" as const,
             original_title: result.original_title,
+            original_snippet: result.original_snippet,
             original_language: result.original_language,
             is_translated: !!result.original_language,
           }));
         
           const entities =
             backendSection.entities?.map((entity) => ({
-              text: entity.name,
-              type: entity.label,
+              name: entity.name,
+              label: entity.label,
             })) || [];
 
         return {
@@ -229,6 +232,7 @@ function classifyType(url: string, title: string): "news" | "website" {
 }
 
 // Helper function: Generate mock results for fallback
+/*
 function generateMockResults(): ResultItem[] {
   return Array.from({ length: 5 }, (_, i) => ({
     id: `mock-${i}-${Date.now()}`,
@@ -241,6 +245,8 @@ function generateMockResults(): ResultItem[] {
     type: "news" as const,
   }));
 }
+  */
+
 //Register
 export async function registerUser(formData: {
   email: string;
@@ -327,7 +333,7 @@ export async function getUserHistory(userId: string) {
     }
 
     const history = await response.json();
-    console.log("✅ User history received:", history);
+    console.log("User history received:", history);
 
     return history;
   } catch (error) {
@@ -360,7 +366,7 @@ export async function addToUserHistory(
     }
 
     const result = await response.json();
-    console.log("✅ Added to user history:", result);
+    console.log("Added to user history:", result);
 
     return result;
   } catch (error) {

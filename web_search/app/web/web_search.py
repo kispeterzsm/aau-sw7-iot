@@ -191,6 +191,7 @@ class WebScraping:
                 if original_lang:
                     result_data["title"] = f"{title} (original language source: {original_lang})"
                     result_data["original_title"] = original_title_text 
+                    result_data["original_snippet"] = original_snippet_text 
                     result_data["original_language"] = original_lang
                 
                 results_with_date.append(result_data)
@@ -205,6 +206,7 @@ class WebScraping:
                 if original_lang:
                     web_data["title"] = f"{title} (original language source: {original_lang})"
                     web_data["original_title"] = original_title_text
+                    web_data["original_snippet"] = original_snippet_text 
                     web_data["original_language"] = original_lang
                     
                 websites.append(web_data)
@@ -220,7 +222,8 @@ class WebScraping:
         num_results: int = DEFAULT_NUM_RESULTS,
         num_undated_target: int = DEFAULT_UNDATED_NUM_RESULTS,
         search_type: str = 'news',
-        market: Optional[str] = None
+        market: Optional[str] = None,
+        entities: Optional[List[Dict[str, str]]] = None
     ) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """
         - Detects language and sets region.
@@ -306,4 +309,6 @@ class WebScraping:
 
     @staticmethod
     def get_oldest_result(dated_results: List[Dict[str, str]]) -> Optional[Dict[str, str]]:
+        if not dated_results:
+            return None
         return min(dated_results, key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d"))

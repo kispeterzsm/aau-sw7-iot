@@ -93,7 +93,6 @@ services:
       start_period: 20s
 
   # --- Emails ---
-
   email-service:
     build: ./email_service
     container_name: email-service
@@ -109,26 +108,26 @@ services:
     image: maildev/maildev
     container_name: maildev
     ports:
-      - "1080:1080"   # Web UI to preview emails
-      - "1025:1025"   # SMTP server
+      - "1080:1080"   # Web UI
+      - "1025:1025"   # SMTP
     networks:
       - app-network
     restart: unless-stopped
 
-  # --- 5. Frontend ---
-  frontend:
-    build: ./frontend
-    container_name: frontend-app
-    depends_on:
-      api:
-        condition: service_healthy
-    environment:
-      - NEXT_PUBLIC_API_URL=http://api:8999
-    ports: 
-      - "3000:3000"
-    restart: unless-stopped
-    networks:
-      - app-network
+    # --- 5. Frontend ---
+    frontend:
+      build: ./frontend
+      container_name: frontend-app
+      depends_on:
+        api:
+          condition: service_healthy
+      environment:
+        - NEXT_PUBLIC_API_URL=http://api:8999
+      ports: 
+        - "3000:3000"
+      restart: unless-stopped
+      networks:
+        - app-network
 
 volumes:
   pgdata:

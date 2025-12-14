@@ -8,4 +8,7 @@ public class SearchResultBase {
     private String url;
     private String snippet;
     private String date;   // ISO string
+    private String originalTitle;
+    private String originalSnippet;
+    private String originalLanguage;
 }

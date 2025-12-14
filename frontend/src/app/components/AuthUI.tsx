@@ -155,7 +155,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
           });
           setIsSignInMode(true);
         } else {
-          toast.success("Welcome to InfoTracer!", {
+          toast.success("Welcome to IOT!", {
             description: "Your account has been created and you're now signed in.",
           });
           router.push("/");
@@ -212,7 +212,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   Create Account
                 </h2>
                 <p className="text-sm text-slate-700 dark:text-slate-400 max-w-[280px]">
-                  Join InfoTracer to trace and verify online claims
+                  Join IOT to track and verify online claims
                 </p>
               </div>
 
@@ -311,7 +311,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   Welcome Back
                 </h2>
                 <p className="text-sm text-slate-700 dark:text-slate-400 max-w-[280px]">
-                  Sign in to continue tracing information origins
+                  Sign in to continue tracking information origins
                 </p>
               </div>
               {!showMfaInput ? (
@@ -445,7 +445,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   <div className="h-1 w-12 bg-white/40 rounded-full mx-auto"></div>
                 </div>
                 <p className="text-base text-white/90 mb-8 max-w-[240px]">
-                  Sign in to your account and continue tracing information origins
+                  Sign in to your account and continue tracking information origins
                 </p>
                 <button
                   type="button"
@@ -462,7 +462,7 @@ const AuthUI: React.FC<AuthUIProps> = ({ initialSignIn = true }) => {
                   <div className="h-1 w-12 bg-white/40 rounded-full mx-auto"></div>
                 </div>
                 <p className="text-base text-white/90 mb-8 max-w-[240px]">
-                  Create an account and start tracing information across the web
+                  Create an account and start tracking information sources across the web
                 </p>
                 <button
                   type="button"

@@ -66,7 +66,7 @@ def process_content(data: ProcessRequest):
             article, lang = get_site_data(data.article_url)
             
             # Pass the full article object to the pipeline
-            queries = nlp_pipe.do_the_thing(
+            queries = nlp_pipe.execute_pipeline(
                 article, 
                 top_x=data.top_x, 
                 query_variations=data.query_variations
@@ -80,9 +80,9 @@ def process_content(data: ProcessRequest):
                 dummy_article = Article("") 
                 dummy_article.set_text(data.content)
                 dummy_article.set_summary(data.content) 
-                queries = nlp_pipe.do_the_thing(dummy_article, top_x=data.top_x, query_variations=data.query_variations)
+                queries = nlp_pipe.execute_pipeline(dummy_article, top_x=data.top_x, query_variations=data.query_variations)
             else:
-                queries = nlp_pipe.do_the_thing(data.content, top_x=data.top_x, query_variations=data.query_variations)
+                queries = nlp_pipe.execute_pipeline(data.content, top_x=data.top_x, query_variations=data.query_variations)
             
             return {"queries": queries, "detected_lang": "en"}
 

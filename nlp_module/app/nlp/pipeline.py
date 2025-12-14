@@ -144,7 +144,7 @@ class NLP_Pipeline():
             
         return processed_sentences
 
-    def do_the_thing(self, input, top_x:int=5, query_variations:int=1, do_ner=True) -> List[dict]:
+    def execute_pipeline(self, input, top_x:int=5, query_variations:int=1, do_ner=True) -> List[dict]:
         searchterms = None
         entities = None
         
@@ -162,7 +162,7 @@ class NLP_Pipeline():
             for s in searchterms:
                 s["entities"] = []
                 for e in entities:
-                    if e["name"] in s["sentence"]:
+                    if e["name"].lower() in s["sentence"].lower():
                         s["entities"].append(e)
 
         if query_variations <= 1:

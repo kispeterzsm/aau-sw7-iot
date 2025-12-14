@@ -106,15 +106,16 @@ async def link_all(data: Input):
 
     final_market = _get_market_code(data.market) or _get_market_code(detected_lang)
 
-    # 2. Search Bing (Run locally on CPU)
     all_dated_results = []
 
     for query in queries:
         term = query.get("search_term") 
+        entities = query.get("entities", [])
         
         results_with_dates, websites_without_dates = await asyncio.to_thread(
             scraper.search_bing,
             term,
+            entities=entities,
             num_results=data.search_depth,
             num_undated_target=data.search_depth,
             market=final_market
@@ -124,7 +125,7 @@ async def link_all(data: Input):
         query["website_results"] = websites_without_dates
         all_dated_results.extend(results_with_dates)
 
-    oldest = await asyncio.to_thread(scraper.get_oldest_result, results_with_dates)
+    oldest = await asyncio.to_thread(scraper.get_oldest_result, all_dated_results)
     return {"warning": None, "result": queries, "oldest_result": oldest}
 
 
@@ -175,10 +176,12 @@ async def text_all(data: Input):
 
     for query in queries:
         term = query.get("search_term")
+        entities = query.get("entities", [])
         
         results_with_dates, websites_without_dates = await asyncio.to_thread(
             scraper.search_bing,
             term,
+            entities=entities,
             num_results=data.search_depth,
             num_undated_target=data.search_depth,
             market=final_market
