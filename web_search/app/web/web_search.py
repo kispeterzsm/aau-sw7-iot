@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 from stealth_requests import StealthSession
 from deep_translator import GoogleTranslator
 from langdetect import detect, LangDetectException
-#from htmldate import find_date
 
 class WebScraping:
     DEFAULT_NUM_RESULTS = 100
@@ -20,16 +19,9 @@ class WebScraping:
         self.interrupt = False
         
     def interrupt_search(self):
-        """
-        User can manually interrupt the search
-        """
         self.interrupt = True
 
     def _translate_result(self, title: str, snippet: str) -> Tuple[str, str, Optional[str]]:
-        """
-        Translates title and snippet if they are not in English.
-        Returns: translated_title, translated_snippet, original_lang_code
-        """
         if not title:
             return title, snippet, None
 
@@ -67,7 +59,6 @@ class WebScraping:
         """
         if not text:
             return None
-
         text_lower = text.lower()
         return dateparser.parse(text_lower)
 
@@ -169,17 +160,15 @@ class WebScraping:
                 self.log.warning(f"Error parsing item structure: {e} - HTML: {item.prettify()[:200]}")
                 continue
 
-            # Language detection
-            original_title_text = title
-            original_snippet_text = snippet
-            translated_title, translated_snippet, original_lang = self._translate_result(original_title_text, original_snippet_text)
+            original_title = title
+            original_snippet = snippet
+            translated_title, translated_snippet, original_lang = self._translate_result(title, snippet)
             title = translated_title
             snippet = translated_snippet
 
             if date_text:
                 date = self.parse_bing_date(date_text)
             
-            # Sort into the correct list
             if title and url and date:
                 result_data = {
                     "title": title,
@@ -190,8 +179,8 @@ class WebScraping:
                 
                 if original_lang:
                     result_data["title"] = f"{title} (original language source: {original_lang})"
-                    result_data["original_title"] = original_title_text 
-                    result_data["original_snippet"] = original_snippet_text 
+                    result_data["original_title"] = original_title
+                    result_data["original_snippet"] = original_snippet
                     result_data["original_language"] = original_lang
                 
                 results_with_date.append(result_data)
@@ -205,14 +194,14 @@ class WebScraping:
                 }
                 if original_lang:
                     web_data["title"] = f"{title} (original language source: {original_lang})"
-                    web_data["original_title"] = original_title_text
-                    web_data["original_snippet"] = original_snippet_text 
+                    web_data["original_title"] = original_title
+                    web_data["original_snippet"] = original_snippet
                     web_data["original_language"] = original_lang
                     
                 websites.append(web_data)
 
         if not results_with_date and not websites and html: 
-            self.log.warning(f"No results parsed from page. Container selectors '{container_selectors}' might be outdated.")
+            self.log.warning(f"No results parsed from page.")
 
         return results_with_date, websites
 
@@ -237,8 +226,8 @@ class WebScraping:
         per_page = 10
         page = 0
 
-        # Limits to prevent prolonged waiting times
-        MAX_PAGES = 100
+        # --- Updated Configuration ---
+        MAX_PAGES = 50
         MAX_DURATION_SEC = 90
         start_time = time.time()
         
@@ -248,7 +237,8 @@ class WebScraping:
         if market is None:
             self.log.warning(f"Language detection failed for '{query}', defaulting to US market.")
             final_market = "en-US"
-        else: final_market = market
+        else: 
+            final_market = market
 
         with StealthSession() as session:
             while ((len(results_with_dates) < num_results or len(websites_without_dates) < num_undated_target) 
@@ -256,9 +246,9 @@ class WebScraping:
                     # timeout in case it takes too much time
                     and (time.time() - start_time <= MAX_DURATION_SEC)):
                 
-                #if time.time() - start_time > MAX_DURATION_SEC:
-                #    self.log.warning(f"Search timed out after {MAX_DURATION_SEC} seconds. Returning partial results.")
-                #    break
+                if time.time() - start_time > MAX_DURATION_SEC:
+                    self.log.warning(f"Search timed out after {MAX_DURATION_SEC} seconds.")
+                    break
                 
                 # User interrupts search
                 if self.interrupt: 
@@ -280,7 +270,6 @@ class WebScraping:
                     break
 
                 html = getattr(resp, "text", "")
-                
                 page_dated_results, page_undated_websites = self.parse_bing_results(
                     html, search_type=search_type 
                 ) 

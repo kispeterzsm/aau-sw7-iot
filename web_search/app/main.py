@@ -143,7 +143,7 @@ async def text_all(data: Input):
     if len(words) < 5: 
         warning_message = "Input is very short. Searching directly."
         queries = [{"search_term": text_input, "sentence": text_input}]
-        data.search_depth = 30
+        data.search_depth = 50
 
         try:
             original_lang = detect(text_input)

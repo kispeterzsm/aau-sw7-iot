@@ -114,20 +114,20 @@ services:
       - app-network
     restart: unless-stopped
 
-    # --- 5. Frontend ---
-    frontend:
-      build: ./frontend
-      container_name: frontend-app
-      depends_on:
-        api:
-          condition: service_healthy
-      environment:
-        - NEXT_PUBLIC_API_URL=http://api:8999
-      ports: 
-        - "3000:3000"
-      restart: unless-stopped
-      networks:
-        - app-network
+  # --- 5. Frontend ---
+  frontend:
+    build: ./frontend
+    container_name: frontend-app
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8999
+    ports: 
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
   pgdata:
